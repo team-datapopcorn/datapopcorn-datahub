@@ -1,0 +1,302 @@
+[
+  {
+    "ATPT_OFCDC_SC_CODE": "B10",
+    "SD_SCHUL_CODE": "7010057",
+    "SCHUL_NM": "가락고등학교",
+    "Region": "Seoul"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "B10",
+    "SD_SCHUL_CODE": "7130165",
+    "SCHUL_NM": "가락중학교",
+    "Region": "Seoul"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "B10",
+    "SD_SCHUL_CODE": "7041164",
+    "SCHUL_NM": "가산중학교",
+    "Region": "Seoul"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "B10",
+    "SD_SCHUL_CODE": "7130166",
+    "SCHUL_NM": "가원중학교",
+    "Region": "Seoul"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "B10",
+    "SD_SCHUL_CODE": "7011169",
+    "SCHUL_NM": "가재울고등학교",
+    "Region": "Seoul"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "C10",
+    "SD_SCHUL_CODE": "       ",
+    "SCHUL_NM": "(가칭)에코1초등학교",
+    "Region": "Busan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "C10",
+    "SD_SCHUL_CODE": "       ",
+    "SCHUL_NM": "(가칭)에코3중학교",
+    "Region": "Busan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "C10",
+    "SD_SCHUL_CODE": "       ",
+    "SCHUL_NM": "(가칭)일광3초등학교",
+    "Region": "Busan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "C10",
+    "SD_SCHUL_CODE": "7181010",
+    "SCHUL_NM": "가남초등학교",
+    "Region": "Busan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "C10",
+    "SD_SCHUL_CODE": "7211215",
+    "SCHUL_NM": "가동초등학교",
+    "Region": "Busan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "D10",
+    "SD_SCHUL_CODE": "7281014",
+    "SCHUL_NM": "가창중학교",
+    "Region": "Daegu"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "D10",
+    "SD_SCHUL_CODE": "7240223",
+    "SCHUL_NM": "강동고등학교",
+    "Region": "Daegu"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "D10",
+    "SD_SCHUL_CODE": "7251026",
+    "SCHUL_NM": "강동중학교",
+    "Region": "Daegu"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "D10",
+    "SD_SCHUL_CODE": "7240068",
+    "SCHUL_NM": "강북고등학교",
+    "Region": "Daegu"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "D10",
+    "SD_SCHUL_CODE": "7261033",
+    "SCHUL_NM": "강북중학교",
+    "Region": "Daegu"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "E10",
+    "SD_SCHUL_CODE": "7310207",
+    "SCHUL_NM": "가림고등학교",
+    "Region": "Incheon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "E10",
+    "SD_SCHUL_CODE": "7310035",
+    "SCHUL_NM": "가정고등학교",
+    "Region": "Incheon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "E10",
+    "SD_SCHUL_CODE": "7361075",
+    "SCHUL_NM": "가정여자중학교",
+    "Region": "Incheon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "E10",
+    "SD_SCHUL_CODE": "7310217",
+    "SCHUL_NM": "가좌고등학교",
+    "Region": "Incheon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "E10",
+    "SD_SCHUL_CODE": "7361077",
+    "SCHUL_NM": "가좌중학교",
+    "Region": "Incheon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "F10",
+    "SD_SCHUL_CODE": "7391134",
+    "SCHUL_NM": "각화중학교",
+    "Region": "Gwangju"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "F10",
+    "SD_SCHUL_CODE": "7391093",
+    "SCHUL_NM": "각화초등학교",
+    "Region": "Gwangju"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "F10",
+    "SD_SCHUL_CODE": "7391240",
+    "SCHUL_NM": "건국초등학교",
+    "Region": "Gwangju"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "F10",
+    "SD_SCHUL_CODE": "7391089",
+    "SCHUL_NM": "경양초등학교",
+    "Region": "Gwangju"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "F10",
+    "SD_SCHUL_CODE": "7401189",
+    "SCHUL_NM": "계수초등학교",
+    "Region": "Gwangju"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "G10",
+    "SD_SCHUL_CODE": "7451009",
+    "SCHUL_NM": "가수원중학교",
+    "Region": "Daejeon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "G10",
+    "SD_SCHUL_CODE": "7451057",
+    "SCHUL_NM": "가수원초등학교",
+    "Region": "Daejeon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "G10",
+    "SD_SCHUL_CODE": "7451010",
+    "SCHUL_NM": "갈마중학교",
+    "Region": "Daejeon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "G10",
+    "SD_SCHUL_CODE": "7430324",
+    "SCHUL_NM": "계룡디지텍고등학교",
+    "Region": "Daejeon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "G10",
+    "SD_SCHUL_CODE": "7451058",
+    "SCHUL_NM": "구즉초등학교",
+    "Region": "Daejeon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "H10",
+    "SD_SCHUL_CODE": "7491245",
+    "SCHUL_NM": "가온중학교",
+    "Region": "Ulsan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "H10",
+    "SD_SCHUL_CODE": "7501038",
+    "SCHUL_NM": "강남초등학교",
+    "Region": "Ulsan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "H10",
+    "SD_SCHUL_CODE": "7480237",
+    "SCHUL_NM": "강동고등학교",
+    "Region": "Ulsan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "H10",
+    "SD_SCHUL_CODE": "7491148",
+    "SCHUL_NM": "강동중학교",
+    "Region": "Ulsan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "H10",
+    "SD_SCHUL_CODE": "7491093",
+    "SCHUL_NM": "강동초등학교",
+    "Region": "Ulsan"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "I10",
+    "SD_SCHUL_CODE": "9300212",
+    "SCHUL_NM": "가득초등학교",
+    "Region": "Sejong"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "I10",
+    "SD_SCHUL_CODE": "9300187",
+    "SCHUL_NM": "가락초등학교",
+    "Region": "Sejong"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "I10",
+    "SD_SCHUL_CODE": "9300037",
+    "SCHUL_NM": "감성초등학교",
+    "Region": "Sejong"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "I10",
+    "SD_SCHUL_CODE": "9300178",
+    "SCHUL_NM": "고운고등학교",
+    "Region": "Sejong"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "I10",
+    "SD_SCHUL_CODE": "9300174",
+    "SCHUL_NM": "고운중학교",
+    "Region": "Sejong"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "J10",
+    "SD_SCHUL_CODE": "7652009",
+    "SCHUL_NM": "가곡초등학교",
+    "Region": "Gyeonggi"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "J10",
+    "SD_SCHUL_CODE": "7661017",
+    "SCHUL_NM": "가남초등학교",
+    "Region": "Gyeonggi"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "J10",
+    "SD_SCHUL_CODE": "7602003",
+    "SCHUL_NM": "가납초등학교",
+    "Region": "Gyeonggi"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "J10",
+    "SD_SCHUL_CODE": "7631209",
+    "SCHUL_NM": "가내초등학교",
+    "Region": "Gyeonggi"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "J10",
+    "SD_SCHUL_CODE": "7561020",
+    "SCHUL_NM": "가능초등학교",
+    "Region": "Gyeonggi"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "K10",
+    "SD_SCHUL_CODE": "7801089",
+    "SCHUL_NM": "가곡고등학교",
+    "Region": "Gangwon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "K10",
+    "SD_SCHUL_CODE": "7872037",
+    "SCHUL_NM": "가곡중학교",
+    "Region": "Gangwon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "K10",
+    "SD_SCHUL_CODE": "7812050",
+    "SCHUL_NM": "가산초등학교",
+    "Region": "Gangwon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "K10",
+    "SD_SCHUL_CODE": "7812092",
+    "SCHUL_NM": "가정중학교",
+    "Region": "Gangwon"
+  },
+  {
+    "ATPT_OFCDC_SC_CODE": "K10",
+    "SD_SCHUL_CODE": "7801090",
+    "SCHUL_NM": "간동고등학교",
+    "Region": "Gangwon"
+  }
+]

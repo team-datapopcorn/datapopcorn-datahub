@@ -1,0 +1,241 @@
+{
+    "name": "School Data Fetcher",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ],
+            "id": "trigger-node"
+        },
+        {
+            "parameters": {
+                "jsCode": "return [\n  { json: { \"region\": \"Seoul\", \"code\": \"B10\" } },\n  { json: { \"region\": \"Busan\", \"code\": \"C10\" } },\n  { json: { \"region\": \"Daegu\", \"code\": \"D10\" } },\n  { json: { \"region\": \"Incheon\", \"code\": \"E10\" } },\n  { json: { \"region\": \"Gwangju\", \"code\": \"F10\" } },\n  { json: { \"region\": \"Daejeon\", \"code\": \"G10\" } },\n  { json: { \"region\": \"Ulsan\", \"code\": \"H10\" } },\n  { json: { \"region\": \"Sejong\", \"code\": \"I10\" } },\n  { json: { \"region\": \"Gyeonggi\", \"code\": \"J10\" } },\n  { json: { \"region\": \"Gangwon\", \"code\": \"K10\" } }\n];"
+            },
+            "name": "Define Office Codes",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ],
+            "id": "office-codes"
+        },
+        {
+            "parameters": {
+                "url": "https://open.neis.go.kr/hub/schoolInfo",
+                "authentication": "none",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "Type",
+                            "value": "json"
+                        },
+                        {
+                            "name": "pIndex",
+                            "value": "1"
+                        },
+                        {
+                            "name": "pSize",
+                            "value": "100"
+                        },
+                        {
+                            "name": "ATPT_OFCDC_SC_CODE",
+                            "value": "={{ $json.code }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Fetch Schools",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                650,
+                300
+            ],
+            "id": "fetch-schools"
+        },
+        {
+            "parameters": {
+                "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n  if (data.schoolInfo && data.schoolInfo[1] && data.schoolInfo[1].row) {\n    for (const school of data.schoolInfo[1].row) {\n      results.push({ json: school });\n    }\n  }\n}\n\nreturn results;"
+            },
+            "name": "Split Schools",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ],
+            "id": "split-schools"
+        },
+        {
+            "parameters": {
+                "keepOnlySet": true,
+                "values": {
+                    "string": [
+                        {
+                            "name": "ATPT_OFCDC_SC_CODE",
+                            "value": "={{ $json.ATPT_OFCDC_SC_CODE }}"
+                        },
+                        {
+                            "name": "ATPT_OFCDC_SC_NM",
+                            "value": "={{ $json.ATPT_OFCDC_SC_NM }}"
+                        },
+                        {
+                            "name": "SD_SCHUL_CODE",
+                            "value": "={{ $json.SD_SCHUL_CODE }}"
+                        },
+                        {
+                            "name": "SCHUL_NM",
+                            "value": "={{ $json.SCHUL_NM }}"
+                        },
+                        {
+                            "name": "ENG_SCHUL_NM",
+                            "value": "={{ $json.ENG_SCHUL_NM }}"
+                        },
+                        {
+                            "name": "SCHUL_KND_SC_NM",
+                            "value": "={{ $json.SCHUL_KND_SC_NM }}"
+                        },
+                        {
+                            "name": "LCTN_SC_NM",
+                            "value": "={{ $json.LCTN_SC_NM }}"
+                        },
+                        {
+                            "name": "JU_ORG_NM",
+                            "value": "={{ $json.JU_ORG_NM }}"
+                        },
+                        {
+                            "name": "FOND_SC_NM",
+                            "value": "={{ $json.FOND_SC_NM }}"
+                        },
+                        {
+                            "name": "ORG_RDNZC",
+                            "value": "={{ $json.ORG_RDNZC }}"
+                        },
+                        {
+                            "name": "ORG_RDNMA",
+                            "value": "={{ $json.ORG_RDNMA }}"
+                        },
+                        {
+                            "name": "ORG_RDNDA",
+                            "value": "={{ $json.ORG_RDNDA }}"
+                        },
+                        {
+                            "name": "ORG_TELNO",
+                            "value": "={{ $json.ORG_TELNO }}"
+                        },
+                        {
+                            "name": "HMPG_ADRES",
+                            "value": "={{ $json.HMPG_ADRES }}"
+                        },
+                        {
+                            "name": "COEDU_SC_NM",
+                            "value": "={{ $json.COEDU_SC_NM }}"
+                        },
+                        {
+                            "name": "ORG_FAXNO",
+                            "value": "={{ $json.ORG_FAXNO }}"
+                        },
+                        {
+                            "name": "HS_SC_NM",
+                            "value": "={{ $json.HS_SC_NM }}"
+                        },
+                        {
+                            "name": "INDST_SPECL_CCCCL_EXST_YN",
+                            "value": "={{ $json.INDST_SPECL_CCCCL_EXST_YN }}"
+                        },
+                        {
+                            "name": "HS_GNRL_BUSNS_SC_NM",
+                            "value": "={{ $json.HS_GNRL_BUSNS_SC_NM }}"
+                        },
+                        {
+                            "name": "SPCLY_PURPS_HS_ORD_NM",
+                            "value": "={{ $json.SPCLY_PURPS_HS_ORD_NM }}"
+                        },
+                        {
+                            "name": "ENE_BFE_SEHF_SC_NM",
+                            "value": "={{ $json.ENE_BFE_SEHF_SC_NM }}"
+                        },
+                        {
+                            "name": "DGHT_SC_NM",
+                            "value": "={{ $json.DGHT_SC_NM }}"
+                        },
+                        {
+                            "name": "FOND_YMD",
+                            "value": "={{ $json.FOND_YMD }}"
+                        },
+                        {
+                            "name": "FOAS_MEMRD",
+                            "value": "={{ $json.FOAS_MEMRD }}"
+                        },
+                        {
+                            "name": "LOAD_DTM",
+                            "value": "={{ $json.LOAD_DTM }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Format Data",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                300
+            ],
+            "id": "format-data"
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Define Office Codes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Define Office Codes": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Schools",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Schools": {
+            "main": [
+                [
+                    {
+                        "node": "Split Schools",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Schools": {
+            "main": [
+                [
+                    {
+                        "node": "Format Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

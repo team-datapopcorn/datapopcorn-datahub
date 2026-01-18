@@ -1,0 +1,259 @@
+{
+  "name": "NEIS Meal Data Paginated Fetcher",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "7f0e9b1d-1c2a-4b3d-8e5f-1234567890ab",
+      "name": "When clicking \"Execute Workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        380,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "KEY",
+              "value": "sample"
+            },
+            {
+              "name": "ATPT_OFCDC_SC_CODE",
+              "value": "B10"
+            },
+            {
+              "name": "SD_SCHUL_CODE",
+              "value": "7010057"
+            }
+          ],
+          "number": [
+            {
+              "name": "pSize",
+              "value": 100
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-111111111111",
+      "name": "Set Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        600,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://open.neis.go.kr/hub/mealServiceDietInfo",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "KEY",
+              "value": "={{ $json.KEY }}"
+            },
+            {
+              "name": "Type",
+              "value": "json"
+            },
+            {
+              "name": "pIndex",
+              "value": "1"
+            },
+            {
+              "name": "pSize",
+              "value": "1"
+            },
+            {
+              "name": "ATPT_OFCDC_SC_CODE",
+              "value": "={{ $json.ATPT_OFCDC_SC_CODE }}"
+            },
+            {
+              "name": "SD_SCHUL_CODE",
+              "value": "={{ $json.SD_SCHUL_CODE }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-222222222222",
+      "name": "Get Total Count",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        820,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const totalCount = $json.mealServiceDietInfo[0].head[0].list_total_count;\nconst pSize = $node[\"Set Configuration\"].json.pSize;\nconst totalPages = Math.ceil(totalCount / pSize);\n\nconst items = [];\nfor (let i = 1; i <= totalPages; i++) {\n  items.push({\n    pIndex: i,\n    pSize: pSize\n  });\n}\n\nreturn items;"
+      },
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-333333333333",
+      "name": "Generate Page List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-444444444444",
+      "name": "Loop Over Pages",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1260,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://open.neis.go.kr/hub/mealServiceDietInfo",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "KEY",
+              "value": "={{ $node[\"Set Configuration\"].json.KEY }}"
+            },
+            {
+              "name": "Type",
+              "value": "json"
+            },
+            {
+              "name": "pIndex",
+              "value": "={{ $json.pIndex }}"
+            },
+            {
+              "name": "pSize",
+              "value": "={{ $json.pSize }}"
+            },
+            {
+              "name": "ATPT_OFCDC_SC_CODE",
+              "value": "={{ $node[\"Set Configuration\"].json.ATPT_OFCDC_SC_CODE }}"
+            },
+            {
+              "name": "SD_SCHUL_CODE",
+              "value": "={{ $node[\"Set Configuration\"].json.SD_SCHUL_CODE }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-555555555555",
+      "name": "Fetch Page Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1480,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\nconst rows = $json.mealServiceDietInfo[1].row;\n\nfor (const row of rows) {\n  results.push({\n    json: row\n  });\n}\n\nreturn results;"
+      },
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-666666666666",
+      "name": "Extract Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "When clicking \"Execute Workflow\"": {
+      "main": [
+        [
+          {
+            "node": "Set Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Configuration": {
+      "main": [
+        [
+          {
+            "node": "Get Total Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Total Count": {
+      "main": [
+        [
+          {
+            "node": "Generate Page List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Page List": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Pages": {
+      "main": [
+        [
+          {
+            "node": "Fetch Page Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Page Data": {
+      "main": [
+        [
+          {
+            "node": "Extract Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Rows": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
