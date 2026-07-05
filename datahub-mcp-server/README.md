@@ -6,7 +6,9 @@
 
 ## 현재 배포 상태
 
-`https://api.datapopcorn.ai/mcp` 로 실제 운영 중.
+`https://api.datapopcorn.ai/mcp` 로 실제 운영 중. `https://api.datapopcorn.ai/` (경로 없이)는 서버 설명 +
+연결 방법 + 현재 툴 목록을 보여주는 랜딩페이지 — 목록은 페이지가 그 자리에서 `/mcp`에 물어봐서 그리는
+거라 하드코딩 아님, 새 툴 배포하면 자동으로 같이 바뀜.
 
 - 호스트: `datapopcorn-popcorn-mbp` (Tailscale 태그, macOS, brew/sudo 없이 Node/cloudflared 바이너리 직접 설치)
 - 노출 방식: Cloudflare Tunnel (`datahub-mcp` 터널, `protocol: http2` 강제 — 이 네트워크에서 QUIC 기본값이 막혀서 http2로 바꿈)
@@ -100,9 +102,6 @@ server {
    `search_schools`, `get_status` 같은 이름 쓰면 소스가 늘어날수록 이름이 겹치거나 헷갈림.
 3. `index.js`와 `http.js` 둘 다에서 import 후 `register<Source>Tools(server)` 한 줄씩 추가
 4. `tools/guide.js`의 안내 텍스트에도 새 소스/툴 목록 추가 (에이전트가 `guide` 툴로 전체 목록을 알 수 있게)
-
-다음 후보: Haerapy 상태(`haerapy_`), 제주 골프(`golf_`), 울릉도 맛집(`restaurant_`), 개인 건강/재무/식단 데이터
-(지금 `data-hub/src/sampleData.js`에 하드코딩된 것들).
 
 ## Claude Code에 연결
 

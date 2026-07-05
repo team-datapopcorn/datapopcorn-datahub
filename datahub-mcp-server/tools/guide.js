@@ -24,7 +24,6 @@ const GUIDE_TEXT = `# datahub-mcp-server 사용 가이드
 
 - 지금은 공개 데이터(NEIS)만 있어서 인증 없이 열려 있음. 개인 건강/재무 등 비공개 소스가 추가되면
   인증이 붙을 예정 — 그 전까지는 아무나 호출 가능한 읽기 전용 서버.
-- 새로 추가될 예정인 소스: Haerapy 상태, 제주 골프, 울릉도 맛집, 개인 건강/재무/식단 데이터.
 `;
 
 export function registerGuideTools(server) {

@@ -8,7 +8,6 @@ This is a monorepo of unrelated small projects, not a single application:
 
 - `data-hub/` — React + Vite dashboard ("DATA POPCORN"). Single-page app (`src/App.jsx`) that renders a sidebar of data categories (external systems like Haerapy/Jeju Golf/restaurants, plus a personal hub: blood donation, diet, OOTD, environment, health, finance) and a generic table view driven off `src/sampleData.js`. All data is currently hardcoded sample data — there is no backend wired up; adding a new category means adding a key to `sampleData.js` and an entry to the `categories`/`personalData` arrays in `App.jsx`.
 - `passid/` — React + Vite + Tailwind v4 landing page + editor for an AI ID-photo product ("PassID"). `src/App.jsx` is the marketing page; clicking "Start for Free" swaps to `src/components/Editor.jsx`, which uploads a photo and runs client-side background removal via `@imgly/background-removal` (WASM/GPU, runs entirely in-browser — no server upload). AI generation prompts (Korean-language, for external tools like Gemini) live in `src/constants/prompts.js` and are treated as a distinct, curated asset — edit the prompt text carefully, it's tuned for identity-preserving ID photo output.
-- `wfc-map-gen/` — React + Vite scaffold, currently just a placeholder (`Map Canvas Placeholder`); no real logic yet.
 - `neis-meal-api/` — NEIS Open API (Korean school meal/school info) scripts, decoupled from the three apps above:
   - `fetch_schools.py` — samples schools per region from the `schoolInfo` NEIS endpoint into `schools.json` (relative to this folder).
   - `fetch_meals_paginated.sh` — bash/curl pagination loop against the `mealServiceDietInfo` endpoint into `meals_all_pages.json` (relative to this folder).
@@ -19,7 +18,7 @@ This is a monorepo of unrelated small projects, not a single application:
 
 ## Commands
 
-Each of `data-hub/`, `passid/`, `wfc-map-gen/` is an independent Vite project — run commands from inside that subdirectory:
+Each of `data-hub/`, `passid/` is an independent Vite project — run commands from inside that subdirectory:
 
 ```
 npm install
@@ -29,12 +28,12 @@ npm run lint      # eslint .
 npm run preview   # preview production build
 ```
 
-There is no test suite in any subproject. There is no root-level build — the root only holds the NEIS scripts/workflow JSON and the three app directories.
+There is no test suite in any subproject. There is no root-level build.
 
 For the Python/shell NEIS scripts, run directly (`python3 fetch_schools.py`, `./fetch_meals_paginated.sh`); both hit the live NEIS Open API and expect a real `KEY` (the shell script currently uses the placeholder `"sample"` key, which NEIS rate/size-limits).
 
 ## Conventions
 
-- All three frontend apps use React 19 + Vite 7 with plain JS (`.jsx`, no TypeScript) and ESLint's flat config (`eslint.config.js`) per-project.
-- `passid` and `data-hub` use `clsx` + `tailwind-merge` (see `cn()` helper in `passid/src/components/Editor.jsx`) for conditional class composition; `passid` additionally uses Tailwind v4 (`@tailwindcss/postcss`) for styling, while `data-hub` and `wfc-map-gen` use plain CSS files (`App.css`/`index.css`).
+- Both frontend apps use React 19 + Vite 7 with plain JS (`.jsx`, no TypeScript) and ESLint's flat config (`eslint.config.js`) per-project.
+- `passid` and `data-hub` use `clsx` + `tailwind-merge` (see `cn()` helper in `passid/src/components/Editor.jsx`) for conditional class composition; `passid` additionally uses Tailwind v4 (`@tailwindcss/postcss`) for styling, while `data-hub` uses plain CSS files (`App.css`/`index.css`).
 - `framer-motion` is the standard for transitions/animation across `data-hub` and `passid`; follow existing patterns (`AnimatePresence` with `initial`/`animate`/`exit`) rather than introducing a different animation library.
