@@ -99,43 +99,52 @@ Claude Desktop 앱은 "Settings > Connectors" 화면에 직접 명령 실행형 
 5. Claude 데스크탑 완전히 종료 후(맥은 `Cmd+Q`, 트레이 아이콘에서 종료) 재실행
 6. 새 대화창 하단(또는 입력창 옆) 망치/플러그 아이콘 클릭 → `datahub` 툴 목록 보이면 성공
 
-## 5-2. 내 서버에 올려서 `https://api.datapopcorn.ai/mcp` 같은 URL로 쓰기
+## 5-2. `https://api.datapopcorn.ai/mcp` — 이미 떠 있음, 그냥 URL로 붙이면 됨
 
-지금까지는 내 컴퓨터에서만 쓰는 방법(로컬 실행 + Claude가 명령어로 직접 띄움). 다른 사람이나 다른 기기에서도
-URL 하나로 접속하게 하려면 서버에 올려서 HTTP로 열어야 함. 이건 이미 서버/도메인 있는 사람 기준 순서.
+이 서버는 이미 배포되어 실행 중. 새로 설치할 필요 없이 아래처럼 URL만 등록하면 바로 씀:
 
-1. 이 폴더(`datahub-mcp-server`) 통째로 서버에 올림 (git clone/pull, scp 등)
-2. 서버에서 `npm install`
-3. HTTP 모드로 실행:
+- Claude Code:
+  ```
+  claude mcp add --transport http datahub https://api.datapopcorn.ai/mcp
+  ```
+- Claude 데스크탑: `설정 > 커넥터 > 커넥터 추가` 에서 URL `https://api.datapopcorn.ai/mcp` 입력
+
+확인:
+```
+curl -X POST https://api.datapopcorn.ai/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+`neis_list_office_codes`, `neis_search_schools`, `neis_get_meals` 나오면 정상.
+
+## 5-3. (참고) 이 서버는 이렇게 배포되어 있음 — 똑같이 따라 하고 싶을 때
+
+내가 직접 서버 구축해서 똑같은 걸 만들고 싶으면 이 순서 그대로 따라 하면 됨 (VPS든 집에 있는
+맥/리눅스 박스든 상관없음, 공인 IP나 포트포워딩 필요 없음):
+
+1. 이 폴더(`datahub-mcp-server`) 서버로 복사, `npm install`
+2. Node 없으면 https://nodejs.org 에서 받은 바이너리 압축 풀어서 씀 (brew/sudo 없이도 가능)
+3. [cloudflared](https://github.com/cloudflare/cloudflared/releases) 받아서 로그인 (도메인이 Cloudflare에 있어야 함):
    ```
-   PORT=3000 NEIS_API_KEY=발급받은키 npm run start:http
+   cloudflared tunnel login          # 브라우저 열어서 계정 인증
+   cloudflared tunnel create datahub-mcp
+   cloudflared tunnel route dns datahub-mcp api.datapopcorn.ai
    ```
-   `/mcp` 경로로 열림 (기본값). 이 명령을 터미널 끄면 같이 꺼지니, 계속 띄워두려면 `pm2` 같은 프로세스
-   매니저로 등록 (`pm2 start http.js --name datahub-mcp -- `).
-4. 이미 쓰고 있는 리버스 프록시(nginx/Caddy 등)에서 `api.datapopcorn.ai` 도메인을 이 서버의 3000번
-   포트, `/mcp` 경로로 연결 (구체적인 설정 예시는 `README.md` 참고)
-5. 확인: 다른 터미널에서
+4. `~/.cloudflared/config.yml` 작성 (터널 ID/credentials 경로는 3번 결과에서 나옴):
+   ```yaml
+   tunnel: <터널 ID>
+   credentials-file: /Users/<user>/.cloudflared/<터널 ID>.json
+   protocol: http2
+   ingress:
+     - hostname: api.datapopcorn.ai
+       service: http://localhost:3000
+     - service: http_status:404
    ```
-   curl -X POST https://api.datapopcorn.ai/mcp \
-     -H "Content-Type: application/json" \
-     -H "Accept: application/json, text/event-stream" \
-     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
-   ```
-   `list_office_codes`, `search_schools`, `get_meals` 목록 나오면 성공.
-6. Claude Code에 URL로 등록:
-   ```
-   claude mcp add --transport http datahub https://api.datapopcorn.ai/mcp
-   ```
-   Claude 데스크탑은 5-1과 같은 config 파일 방식인데, `command` 대신 아래처럼 `url`만 넣으면 됨:
-   ```json
-   {
-     "mcpServers": {
-       "datahub": {
-         "url": "https://api.datapopcorn.ai/mcp"
-       }
-     }
-   }
-   ```
+   `protocol: http2`는 QUIC(기본값)이 네트워크에서 막혀있을 때만 필요 — 안 막혀 있으면 빼도 됨.
+5. 두 프로세스를 계속 띄워둠 (`node http.js`, `cloudflared tunnel run datahub-mcp`) — macOS는 launchd,
+   리눅스는 systemd로 등록해서 재부팅에도 살아남게 할 것. 자세한 launchd plist 예시는 `README.md` 참고.
+6. 5-2의 curl로 확인.
 
 주의: 지금은 인증 없이 공개. NEIS는 어차피 공개 데이터라 괜찮지만, Haerapy/개인 건강·재무 같은
 소스를 여기 붙이는 순간 아무나 그 데이터에 접근 가능해짐 — 그 전에 API 키/토큰 인증 레이어 반드시 추가할 것.
@@ -144,12 +153,14 @@ URL 하나로 접속하게 하려면 서버에 올려서 HTTP로 열어야 함. 
 
 Claude Code든 Claude 데스크탑이든 대화창에서 그냥 자연어로 물어보면 됨. 예시:
 
+- "datahub guide 보여줘" (뭐가 있는지 처음 확인할 때)
 - "서울 지역 학교 코드 알려줘"
 - "서울 B10, 학교코드 7010057 학교 이번 달 급식 알려줘"
 - "제주 지역 고등학교 검색해줘"
 
-Claude가 알아서 `list_office_codes`, `search_schools`, `get_meals` 툴을 호출함. 직접 함수 이름
-몰라도 됨 — 자연어로 요청하면 AI가 알맞은 툴 골라서 씀.
+Claude가 알아서 `neis_list_office_codes`, `neis_search_schools`, `neis_get_meals` 툴을 호출함. 직접 함수 이름
+몰라도 됨 — 자연어로 요청하면 AI가 알맞은 툴 골라서 씀. 뭐가 있는지 먼저 보고 싶으면 `guide` 툴을 부르라고
+하면 전체 소스/툴 목록과 예시를 보여줌.
 
 ## 7. 문제 생기면
 

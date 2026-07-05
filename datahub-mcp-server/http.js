@@ -5,12 +5,17 @@ import http from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { registerNeisTools } from "./tools/neis.js";
+import { registerGuideTools, SERVER_INSTRUCTIONS } from "./tools/guide.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const MCP_PATH = process.env.MCP_PATH || "/mcp";
 
 function buildServer() {
-  const server = new McpServer({ name: "datahub-mcp-server", version: "0.1.0" });
+  const server = new McpServer(
+    { name: "datahub-mcp-server", version: "0.1.0" },
+    { instructions: SERVER_INSTRUCTIONS },
+  );
+  registerGuideTools(server);
   registerNeisTools(server);
   // Add more tool modules here, same as index.js:
   // registerHaerapyTools(server);

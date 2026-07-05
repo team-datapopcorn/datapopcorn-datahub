@@ -45,17 +45,17 @@ function asText(value) {
 
 export function registerNeisTools(server) {
   server.tool(
-    "list_office_codes",
-    "지역명(서울/부산/제주 등) -> NEIS 시도교육청 코드(ATPT_OFCDC_SC_CODE) 매핑을 반환합니다.",
+    "neis_list_office_codes",
+    "[NEIS] 지역명(서울/부산/제주 등) -> NEIS 시도교육청 코드(ATPT_OFCDC_SC_CODE) 매핑을 반환합니다.",
     {},
     async () => asText(OFFICE_CODES),
   );
 
   server.tool(
-    "search_schools",
-    "NEIS schoolInfo API로 학교를 검색합니다. 시도교육청 코드와 학교명(부분 일치)으로 필터링합니다.",
+    "neis_search_schools",
+    "[NEIS] schoolInfo API로 학교를 검색합니다. 시도교육청 코드와 학교명(부분 일치)으로 필터링합니다.",
     {
-      officeCode: z.string().describe("시도교육청 코드, 예: B10 (서울). list_office_codes로 조회 가능"),
+      officeCode: z.string().describe("시도교육청 코드, 예: B10 (서울). neis_list_office_codes로 조회 가능"),
       schoolName: z.string().optional().describe("학교명 부분 일치 검색어"),
       pIndex: z.number().int().min(1).optional().default(1),
       pSize: z.number().int().min(1).max(100).optional().default(20),
@@ -76,8 +76,8 @@ export function registerNeisTools(server) {
   );
 
   server.tool(
-    "get_meals",
-    "NEIS mealServiceDietInfo API로 특정 학교의 급식 정보를 조회합니다. 필요 시 여러 페이지를 자동으로 이어붙여 반환합니다.",
+    "neis_get_meals",
+    "[NEIS] mealServiceDietInfo API로 특정 학교의 급식 정보를 조회합니다. 필요 시 여러 페이지를 자동으로 이어붙여 반환합니다.",
     {
       officeCode: z.string().describe("시도교육청 코드, 예: B10"),
       schoolCode: z.string().describe("표준학교코드 SD_SCHUL_CODE"),
