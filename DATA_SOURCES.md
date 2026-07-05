@@ -33,13 +33,19 @@
 | Source | Dashboard key | data.go.kr dataset / API | Type | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | 제주 골프장 | `jeju_golf_courses` | 15118920 전국 골프장 현황 (제주 필터) | file→odcloud | ✅ Done (this PR) |
-| 울릉도 식당 | `ulleungdo_restaurants` | LOCALDATA 일반음식점 `opnSvcId=07_24_04_P` (울릉군 필터); data.go.kr 이관 2026-04, 표준데이터셋 15096283 | LOCALDATA / std | ⬜ Todo (next) |
-| 헌혈의집 | (`blood_donation` 참고) | 15050729 대한적십자사 헌혈의집 정보 | file→odcloud | ⬜ Todo |
+| 울릉도 식당 | `ulleungdo_restaurants` | 15096283 전국일반음식점표준데이터 (울릉군 주소 필터) | 표준데이터 Open API | ✅ Done (this PR) |
+| 헌혈의집 | (`blood_donation` 참고) | 15050729 대한적십자사 헌혈의집 정보 | file→odcloud | ⬜ Todo (next) |
 | 대기질/환경 | (`environment` 참고) | 15073861 에어코리아 대기오염정보 `getMsrstnAcctoRltmMesureDnsty` | Open API | ⬜ Todo |
 | Haerapy Status | `haerapy_status` | 내부 시스템 (data.go.kr 아님) | N/A | ⛔ Out of scope |
 | Diet / OOTD / Health / Finance / Face Timelapse | (personal) | 개인 데이터, 공개 API 없음 | N/A | ⛔ Personal-only |
 
 Legend: ✅ Done · ⬜ Todo · ⛔ Out of scope
+
+> **울릉도 식당 note**: the original source, **LOCALDATA** (`localdata.go.kr`
+> 일반음식점 `opnSvcId=07_24_04_P`), had its **legacy REST API shut down on
+> 2026-04-16**. This collector uses the successor standard-data feed
+> **15096283 전국일반음식점표준데이터**, filtered client-side on the 울릉군 address.
+> Fallback dataset if needed: **15101688 경상북도_음식점 현황** (file→odcloud).
 
 ---
 
