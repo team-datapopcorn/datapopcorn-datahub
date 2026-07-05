@@ -1,0 +1,19 @@
+{
+  "name": "datahub-mcp-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Personal MCP server exposing data-hub sources (NEIS meals/schools, and more to come) as tools",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "datahub-mcp-server": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "start:http": "node http.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.24.1"
+  }
+}

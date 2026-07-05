@@ -1,0 +1,50 @@
+{
+  "status": "success",
+  "page": 1,
+  "total": 3,
+  "users": [
+    {
+      "id": 101,
+      "name": "Kim Minsu",
+      "email": "minsu.kim@example.com",
+      "address": {
+        "city": "Seoul",
+        "district": "Gangnam",
+        "zip": "06134"
+      },
+      "roles": [
+        "admin",
+        "editor"
+      ],
+      "active": true
+    },
+    {
+      "id": 102,
+      "name": "Lee Jieun",
+      "email": "jieun.lee@example.com",
+      "address": {
+        "city": "Busan",
+        "district": "Haeundae",
+        "zip": "48000"
+      },
+      "roles": [
+        "viewer"
+      ],
+      "active": false
+    },
+    {
+      "id": 103,
+      "name": "Park Jimin",
+      "email": "jimin.park@example.com",
+      "address": {
+        "city": "Jeju",
+        "district": "Seogwipo",
+        "zip": "63500"
+      },
+      "roles": [
+        "editor"
+      ],
+      "active": true
+    }
+  ]
+}

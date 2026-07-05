@@ -1,0 +1,17 @@
+{
+  "app_name": "DataPopcorn Hub",
+  "version": "1.2.0",
+  "features": {
+    "dark_mode": true,
+    "beta_charts": false
+  },
+  "supported_locales": [
+    "ko-KR",
+    "en-US"
+  ],
+  "api": {
+    "base_url": "https://api.example.com",
+    "timeout_ms": 5000,
+    "retries": 3
+  }
+}

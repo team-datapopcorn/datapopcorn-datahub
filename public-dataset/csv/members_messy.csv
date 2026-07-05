@@ -1,0 +1,8 @@
+member_id,name,email,age,join_date,phone
+1,Kim Minsu,minsu.kim@example.com,29,2023-01-15,010-1234-5678
+2,Lee Jieun,,34,2022-11-02,010-9876-5432
+3,Park Jimin,jimin.park@example.com,,2024-03-20,
+3,Park Jimin,jimin.park@example.com,,2024-03-20,
+4,Choi Yuna,yuna.choi@example.com,41,,010-2222-3333
+5,,unknown@example.com,25,2021-07-08,010-4444-5555
+6,Jung Hoon,hoon.jung@example.com,38,2020-05-30,010-5555-6666
