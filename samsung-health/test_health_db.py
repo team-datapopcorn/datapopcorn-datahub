@@ -8,22 +8,35 @@ class HealthDbTest(unittest.TestCase):
         self.conn = health_db.connect(":memory:")
 
     def test_upsert_steps_is_idempotent(self):
-        rows = [{"date": "2026-07-05", "steps": 8421, "distance_m": 6210.5, "calories": 312.4}]
+        rows = [{"measured_at": "2026-07-05 07:51:00", "steps": 14}]
         health_db.upsert_steps(self.conn, rows)
         health_db.upsert_steps(self.conn, rows)
-        got = self.conn.execute("SELECT date, steps FROM steps_daily").fetchall()
-        self.assertEqual(got, [("2026-07-05", 8421)])
+        got = self.conn.execute("SELECT measured_at, steps FROM steps_minutely").fetchall()
+        self.assertEqual(got, [("2026-07-05 07:51:00", 14)])
 
     def test_upsert_replaces_same_key(self):
-        health_db.upsert_steps(self.conn, [{"date": "2026-07-05", "steps": 100, "distance_m": 0, "calories": 0}])
-        health_db.upsert_steps(self.conn, [{"date": "2026-07-05", "steps": 200, "distance_m": 0, "calories": 0}])
-        got = self.conn.execute("SELECT steps FROM steps_daily WHERE date='2026-07-05'").fetchone()
+        health_db.upsert_steps(self.conn, [{"measured_at": "2026-07-05 07:51:00", "steps": 100}])
+        health_db.upsert_steps(self.conn, [{"measured_at": "2026-07-05 07:51:00", "steps": 200}])
+        got = self.conn.execute(
+            "SELECT steps FROM steps_minutely WHERE measured_at='2026-07-05 07:51:00'").fetchone()
         self.assertEqual(got, (200,))
 
+    def test_steps_daily_view_aggregates(self):
+        health_db.upsert_steps(self.conn, [
+            {"measured_at": "2026-07-04 22:10:00", "steps": 120},
+            {"measured_at": "2026-07-05 07:51:00", "steps": 14},
+            {"measured_at": "2026-07-05 08:30:00", "steps": 13},
+        ])
+        got = self.conn.execute("SELECT date, steps FROM steps_daily ORDER BY date").fetchall()
+        self.assertEqual(got, [("2026-07-04", 120), ("2026-07-05", 27)])
+
     def test_all_tables_exist(self):
-        names = {r[0] for r in self.conn.execute(
+        tables = {r[0] for r in self.conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table'")}
-        self.assertTrue({"steps_daily", "sleep_sessions", "heart_rate", "exercises", "sync_state"} <= names)
+        self.assertTrue({"steps_minutely", "sleep_sessions", "heart_rate", "exercises", "sync_state"} <= tables)
+        views = {r[0] for r in self.conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='view'")}
+        self.assertIn("steps_daily", views)
 
     def test_sleep_heart_exercise_upserts(self):
         health_db.upsert_sleep(self.conn, [{

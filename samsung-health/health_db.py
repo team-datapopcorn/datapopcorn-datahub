@@ -2,12 +2,13 @@
 import sqlite3
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS steps_daily (
-    date        TEXT PRIMARY KEY,   -- YYYY-MM-DD
-    steps       INTEGER NOT NULL,
-    distance_m  REAL,
-    calories    REAL
+CREATE TABLE IF NOT EXISTS steps_minutely (
+    measured_at TEXT PRIMARY KEY,   -- YYYY-MM-DD HH:MM:SS (Health Sync 분 단위 원본)
+    steps       INTEGER NOT NULL
 );
+CREATE VIEW IF NOT EXISTS steps_daily AS
+    SELECT date(measured_at) AS date, SUM(steps) AS steps
+    FROM steps_minutely GROUP BY date(measured_at);
 CREATE TABLE IF NOT EXISTS sleep_sessions (
     start_time    TEXT PRIMARY KEY, -- YYYY-MM-DD HH:MM:SS
     end_time      TEXT NOT NULL,
@@ -41,8 +42,8 @@ def connect(path):
 
 def upsert_steps(conn, rows):
     conn.executemany(
-        "INSERT OR REPLACE INTO steps_daily (date, steps, distance_m, calories) "
-        "VALUES (:date, :steps, :distance_m, :calories)", rows)
+        "INSERT OR REPLACE INTO steps_minutely (measured_at, steps) "
+        "VALUES (:measured_at, :steps)", rows)
     conn.commit()
 
 

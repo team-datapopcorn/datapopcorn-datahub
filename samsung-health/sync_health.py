@@ -15,19 +15,35 @@ import parsers
 
 BASE = Path(__file__).resolve().parent
 
-# (파일명 부분 문자열, 파서, upsert) — 파일명 라우팅. 실제 Health Sync 파일명 확인 후 조정.
+# (파일명 부분 문자열, 파서, upsert) — 실제 Health Sync 파일명 기준 한글 라우팅.
+# 예: "걸음 2026.07.05 Samsung Health.csv", "심박수 6월 2026 Samsung Health.csv"
 FILE_ROUTES = [
-    ("steps", parsers.parse_steps, health_db.upsert_steps),
-    ("sleep", parsers.parse_sleep, health_db.upsert_sleep),
-    ("heart", parsers.parse_heart_rate, health_db.upsert_heart_rate),
-    ("exercise", parsers.parse_exercises, health_db.upsert_exercises),
+    ("걸음", parsers.parse_steps, health_db.upsert_steps),
+    ("수면", parsers.parse_sleep, health_db.upsert_sleep),
+    ("심박수", parsers.parse_heart_rate, health_db.upsert_heart_rate),
+    ("운동", parsers.parse_exercises, health_db.upsert_exercises),
 ]
 
+# Health Sync는 데이터 종류마다 Drive 루트에 "Health Sync <종류>" 폴더를 만든다.
+FOLDER_PREFIX = "Health Sync "
 
-def download(remote, raw_dir):
-    subprocess.run(
-        ["rclone", "copy", remote, str(raw_dir), "--include", "*.csv"],
-        check=True)
+
+def list_source_folders(remote_root):
+    out = subprocess.run(
+        ["rclone", "lsf", remote_root, "--dirs-only"],
+        check=True, capture_output=True, text=True).stdout
+    return [d.rstrip("/") for d in out.splitlines() if d.startswith(FOLDER_PREFIX)]
+
+
+def download(remote_root, raw_dir):
+    folders = list_source_folders(remote_root)
+    if not folders:
+        logging.warning("no '%s*' folders found under %s", FOLDER_PREFIX, remote_root)
+    for folder in folders:
+        subprocess.run(
+            ["rclone", "copy", f"{remote_root}{folder}", str(raw_dir),
+             "--include", "*.csv"],
+            check=True)
 
 
 def process_files(conn, raw_dir):
@@ -58,7 +74,8 @@ def process_files(conn, raw_dir):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--remote", default="gdrive:HealthSync")
+    ap.add_argument("--remote", default="gdrive:",
+                    help="rclone 원격 루트 — 이 아래의 'Health Sync *' 폴더들을 전부 내려받음")
     ap.add_argument("--db", default=str(BASE / "health.db"))
     ap.add_argument("--raw-dir", default=str(BASE / "raw"))
     ap.add_argument("--skip-download", action="store_true")
