@@ -33,7 +33,7 @@ def parse_steps(path):
                 "distance_m": float(r.get("Distance") or 0),
                 "calories": float(r.get("Calories") or 0),
             })
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError, AttributeError) as e:
             log.warning("steps row skipped in %s: %r (%s)", path, r, e)
     return rows
 
@@ -49,7 +49,7 @@ def parse_sleep(path):
                 "duration_min": round((end - start).total_seconds() / 60, 1),
                 "stage_summary": (r.get("Sleep stages") or "").strip(),
             })
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError, AttributeError) as e:
             log.warning("sleep row skipped in %s: %r (%s)", path, r, e)
     return rows
 
@@ -62,7 +62,7 @@ def parse_heart_rate(path):
                 "measured_at": _fmt(_dt(r["Time"])),
                 "bpm": float(r["Heart rate"]),
             })
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError, AttributeError) as e:
             log.warning("heart rate row skipped in %s: %r (%s)", path, r, e)
     return rows
 
@@ -79,6 +79,6 @@ def parse_exercises(path):
                 "distance_m": float(r.get("Distance") or 0),
                 "calories": float(r.get("Calories") or 0),
             })
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError, AttributeError) as e:
             log.warning("exercise row skipped in %s: %r (%s)", path, r, e)
     return rows

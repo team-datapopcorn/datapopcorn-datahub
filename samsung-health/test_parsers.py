@@ -44,6 +44,20 @@ class ParsersTest(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_short_and_blank_rows_skipped_not_fatal(self):
+        """Truncated rows (missing fields → None) and blank lines must be skipped, not crash."""
+        import tempfile, os
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as f:
+            # Header, truncated row (missing Steps/Distance/Calories), blank line, valid row
+            f.write("Date,Steps,Distance,Calories\n2026-07-05\n\n2026-07-06,500,1,1\n")
+            path = f.name
+        try:
+            rows = parsers.parse_steps(Path(path))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["date"], "2026-07-06")
+        finally:
+            os.unlink(path)
+
 
 if __name__ == "__main__":
     unittest.main()
