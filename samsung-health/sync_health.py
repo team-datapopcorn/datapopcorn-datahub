@@ -38,14 +38,21 @@ def process_files(conn, raw_dir):
             continue
         for key, parse, upsert in FILE_ROUTES:
             if key in f.name.lower():
-                rows = parse(f)
-                upsert(conn, rows)
-                counts[key] = counts.get(key, 0) + len(rows)
+                try:
+                    rows = parse(f)
+                    if not rows:
+                        logging.warning("no rows parsed from %s; not marking processed", f.name)
+                        break
+                    upsert(conn, rows)
+                    counts[key] = counts.get(key, 0) + len(rows)
+                except Exception:
+                    logging.exception("failed to process %s", f.name)
+                    break
+                else:
+                    health_db.mark_processed(conn, f.name, size)
                 break
         else:
             logging.warning("unknown csv, skipped: %s", f.name)
-            continue
-        health_db.mark_processed(conn, f.name, size)
     return counts
 
 

@@ -1,3 +1,4 @@
 health.db
 raw/
 logs/
+__pycache__/
