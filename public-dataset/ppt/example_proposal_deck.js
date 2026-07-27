@@ -10,7 +10,20 @@
  * 폰트는 px*0.75 = pt 로 옮긴다. 원본 템플릿이 그렇게 만들어졌다.
  */
 
+const path = require('path');
 const pptxgen = require('pptxgenjs');
+
+/* 표지·목차·챕터표지·전면메시지·클로징의 배경.
+ * 원본 템플릿은 여기에 ICTK 브랜드 이미지(칩·지문 비주얼, 로고 박힘)를 깔지만
+ * 다른 회사 제안서에 그 이미지를 쓸 수는 없다. 그래서 원본 목차·전면메시지가
+ * 쓰는 그라디언트(070824 -> 0B1A44 55% -> 0E2A6E, 30도)를 그대로 재현해 대신 쓴다.
+ * 다시 만들려면:
+ *   magick -size 5000x2750 gradient:'#070824-#0B1A44' G1.png
+ *   magick -size 5000x2250 gradient:'#0B1A44-#0E2A6E' G2.png
+ *   magick G1.png G2.png -append -rotate -60 -gravity center -crop 1920x1080+0+0 \
+ *     +repage -depth 8 -resize 960x540 assets/bg_gradient.png
+ */
+const BG = path.join(__dirname, 'assets', 'bg_gradient.png');
 
 /* ── 스펙 상수 : ictk_deck_template.DESIGN.md 에서 그대로 옮김 ───────── */
 
@@ -157,6 +170,47 @@ function card(slide, { x, y, label, title, body, w = 4.17, h = 2.61 }) {
   });
 }
 
+/* 어두운 배경 슬라이드 — 표지·목차·전면메시지·클로징 */
+function darkBg(slide) {
+  slide.addImage({ path: BG, x: 0, y: 0, w: G.W, h: G.H });
+}
+
+/* 로고 자리. 원본은 우하단에 ICTK 로고 이미지(1.19 x 0.67)를 넣는다.
+ * 세이프칩 로고 파일이 없으므로 같은 자리에 워드마크 텍스트를 둔다. */
+function wordmark(slide, { x = 17.7, y = 9.95, align = 'right', color = C.white } = {}) {
+  slide.addText('SAFECHIP', {
+    x, y, w: 1.5, h: 0.40,
+    fontFace: FONT, fontSize: T.cap, bold: true,
+    color, charSpacing: 1.6, align,
+  });
+}
+
+/* 챕터 표지 — 좌측 어두운 패널(9.20) + 우측 흰 바탕 (원본 slide4 실측) */
+function chapterCover(slide, { no, title, subs }) {
+  slide.addImage({ path: BG, x: 0, y: 0, w: 9.20, h: G.H, sizing: { type: 'crop', w: 9.20, h: G.H } });
+  slide.addText(`CHAPTER ${no}`, {
+    x: 10.35, y: 3.30, w: 9.36, h: 0.49,
+    fontFace: FONT, fontSize: T.kick, bold: true, color: C.blue, charSpacing: 1.2,
+  });
+  slide.addText(title, {
+    x: 10.35, y: 3.98, w: 9.36, h: 0.84,
+    fontFace: FONT, fontSize: 48, bold: true, color: C.navy,
+    charSpacing: track(48, -2.5),
+  });
+  slide.addShape('rect', { x: 10.35, y: 5.14, w: 0.92, h: 0.04, fill: { color: C.cyan } });
+  slide.addText(
+    subs.map((t, i) => ({
+      text: `${String(i + 1).padStart(2, '0')}  ${t}`,
+      options: { breakLine: true },
+    })),
+    {
+      x: 10.35, y: 5.64, w: 8.80, h: 2.35,
+      fontFace: FONT, fontSize: T.body, color: C.text2,
+      lineSpacingMultiple: 1.85, valign: 'top',
+    }
+  );
+}
+
 /* 표 — 스킬 규칙에 따라 네이티브 addTable().
  * 원본 템플릿은 표를 도형으로 그렸지만, 표 데이터는 표로 넣어야
  * PowerPoint에서 편집이 된다. 색·행높이만 원본에 맞춘다. */
@@ -222,7 +276,7 @@ const CH = {
 /* 1 — 표지 */
 {
   const s = pptx.addSlide();
-  s.addShape('rect', { x: 0, y: 0, w: G.W, h: G.H, fill: { color: C.deepNavy } });
+  darkBg(s);
   // 원본 표지는 제목 1줄(84pt) 기준이다. 여기는 2줄이라 한 단 낮춘 78pt를 쓰고
   // 부제·사명 y를 그만큼 내렸다. 폭 9.0in에 78pt 8자가 들어간다.
   s.addShape('rect', { x: 10.0, y: 3.40, w: 0.92, h: 0.05, fill: { color: C.cyan } });
@@ -240,50 +294,75 @@ const CH = {
     x: 10.0, y: 7.75, w: 9.62, h: 0.46,   // 원본 표지 텍스트 폭
     fontFace: FONT, fontSize: T.body, color: C.muted, valign: 'top',
   });
+  wordmark(s);
   s.addNotes('표지. 제출처와 제출일을 먼저 확인시키고 시작한다. 문서번호는 구매팀 접수 기준.');
 }
 
-/* 2 — 목차 */
+/* 챕터 정의 — 목차와 챕터 표지가 같은 배열을 쓴다 */
+const CHAPTERS = [
+  ['01', '제안 배경과 현황', '2027년 보안 요구사항과 현재 방식의 한계',
+   ['개정 보안 요구사항과 의무화 시점', '현재 열쇠 관리 방식의 문제 두 가지', '요구 수준 대비 현황 점검']],
+  ['02', '제안 내용', 'SC-100 · SafeManager · 라인 적용 컨설팅',
+   ['보안칩 SC-100 적용', '인증 관리 소프트웨어 SafeManager 연동', '생산 라인 적용 컨설팅']],
+  ['03', '도입 절차와 일정', '4단계 21주, 2026년 10월 양산 개시',
+   ['사전 검토부터 양산 적용까지 4단계', '고객 준비 사항', '주요 일정과 마일스톤']],
+  ['04', '투자 비용과 기대 효과', '초도 2억 6,500만 원, 유출 경로 1개 제거',
+   ['항목별 비용과 총액', '기기 1대당 환산 비용', '도입으로 얻는 효과 세 가지']],
+  ['05', '회사 소개', '설립 2009, 누적 320만 개 공급',
+   ['회사 개요와 공급 실적', '보유 인증']],
+];
+
+/* 2 — 목차 : 그라디언트 배경 위 흰색 5% 반투명 행 (원본 slide3 실측) */
 {
   const s = pptx.addSlide();
-  chrome(s, { title: 'Contents', kicker: '', chapter: '', page: 2 });
-  const items = [
-    ['01', '제안 배경과 현황', '2027년 보안 요구사항과 현재 방식의 한계'],
-    ['02', '제안 내용', 'SC-100 · SafeManager · 라인 적용 컨설팅'],
-    ['03', '도입 절차와 일정', '4단계 21주, 2026년 10월 양산 개시'],
-    ['04', '투자 비용과 기대 효과', '초도 2억 6,500만 원, 유출 경로 1개 제거'],
-    ['05', '회사 소개', '설립 2009, 누적 320만 개 공급'],
-  ];
-  items.forEach(([no, title, desc], i) => {
-    const y = G.bodyY + 0.30 + i * 1.42;
+  darkBg(s);
+  s.addText('Contents', {
+    x: G.m, y: 1.00, w: 12, h: 0.84,
+    fontFace: FONT, fontSize: 48, bold: true, color: C.white, charSpacing: track(48, -2.5),
+  });
+  s.addShape('rect', { x: G.m, y: 2.09, w: 0.92, h: 0.05, fill: { color: C.cyan } });
+
+  CHAPTERS.forEach(([no, title, desc], i) => {
+    const y = 2.85 + i * 1.44;
+    s.addShape('rect', {
+      x: G.m, y, w: G.contentW, h: 1.29,
+      fill: { color: C.white, transparency: 95 },   // 원본 alpha 5000 = 5%
+    });
+    s.addShape('rect', { x: G.m, y, w: 0.05, h: 1.29, fill: { color: C.cyan } });
     s.addText(no, {
-      x: G.m, y, w: 1.2, h: 0.69,
-      fontFace: FONT, fontSize: T.title, bold: true, color: C.blue,
-      charSpacing: track(T.title, -2),
+      x: 1.66, y: y + 0.37, w: 0.81, h: 0.59,
+      fontFace: FONT, fontSize: 27, bold: true, color: C.cyan,
     });
     s.addText(title, {
-      x: G.m + 1.5, y, w: 9.0, h: 0.69,
-      fontFace: FONT, fontSize: T.title, bold: true, color: C.text,
-      charSpacing: track(T.title, -2),
+      x: 2.84, y: y + 0.31, w: 7.0, h: 0.70,
+      fontFace: FONT, fontSize: 33, bold: true, color: C.white, charSpacing: track(33, -2),
     });
     s.addText(desc, {
-      x: G.m + 1.5, y: y + 0.72, w: 12.0, h: 0.46,
-      fontFace: FONT, fontSize: T.body, color: C.text3,
-    });
-    s.addShape('rect', {
-      x: G.m, y: y + 1.20, w: G.contentW, h: 0.01, fill: { color: C.panelBg2 },
+      x: 10.2, y: y + 0.42, w: 8.5, h: 0.49,
+      fontFace: FONT, fontSize: T.kick, color: C.panelBg2, align: 'right',
     });
   });
-  s.addNotes('목차. 5개 묶음으로 재구성했다 — 원문 9개 절을 그대로 읽지 않는다.');
+  wordmark(s);
+  s.addNotes('목차. 원문 9개 절을 5개 챕터로 묶었다 — 절 목록을 그대로 읽으면 발표가 안 된다.');
 }
 
-/* 3 — 1절 제안 배경 : 레이아웃 A (좌 근거 / 우 결론) */
+/* 챕터 표지 — 본문 사이에 끼워 넣는다 (아래 조립부에서 호출) */
+function addChapterCover(idx) {
+  const [no, title, , subs] = CHAPTERS[idx];
+  const s = pptx.addSlide();
+  chapterCover(s, { no, title, subs });
+  s.addNotes(`챕터 ${no} 표지. 좌측 패널은 원본 템플릿의 이미지 자리다.`);
+}
+
+addChapterCover(0);
+
+/* 1절 제안 배경 : 레이아웃 A (좌 근거 / 우 결론) */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '제안 배경',
     kicker: '2027년부터 스마트미터 전량에 기기별 고유 인증이 의무화됩니다',
-    num: '01', chapter: CH.bg, page: 3,
+    num: '01', chapter: CH.bg, page: 4,
   });
   s.addText('현재 방식(공장에서 열쇠 파일 생성 → 기기 메모리 주입)의 문제', {
     x: G.m, y: G.bodyY, w: 9.42, h: 0.53,
@@ -308,13 +387,13 @@ const CH = {
   s.addNotes('레이아웃 A. 좌측 카드 2장이 원문 1절의 문제 두 가지. 우측 패널 결론이 이 발표의 논지 전체다.');
 }
 
-/* 4 — 2절 현황 분석 : 레이아웃 E (비교표) */
+/* 2절 현황 분석 : 레이아웃 E (비교표) */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '현황 분석',
     kicker: '4개 항목 중 3개가 요구 수준에 미달합니다',
-    num: '02', chapter: CH.bg, page: 4,
+    num: '02', chapter: CH.bg, page: 5,
   });
   table(s,
     ['항목', '현재', '요구 수준', '충족 여부'],
@@ -333,13 +412,15 @@ const CH = {
   s.addNotes('레이아웃 E. 원문 2절 표에 "충족 여부" 열을 더했다 — 표만 옮기면 무엇이 문제인지가 안 보인다.');
 }
 
-/* 5 — 3절 제안 내용 : 레이아웃 B (병렬 3항목) */
+addChapterCover(1);
+
+/* 3절 제안 내용 : 레이아웃 B (병렬 3항목) */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '제안 내용',
     kicker: '칩 · 소프트웨어 · 라인 적용을 한 묶음으로 제공합니다',
-    num: '03', chapter: CH.sol, page: 5,
+    num: '03', chapter: CH.sol, page: 7,
   });
   const items = [
     ['3-1', '보안칩 SC-100', '기기마다 다른 고유값을 칩 안에서 직접 생성합니다.',
@@ -378,13 +459,15 @@ const CH = {
   s.addNotes('레이아웃 B. 첫 칸(SC-100)이 대표 항목이라 상단 보더만 블루. 하단 한 줄이 "왜 묶음인가"에 대한 답이다.');
 }
 
-/* 6 — 4절 도입 절차 : 단계 표 */
+addChapterCover(2);
+
+/* 4절 도입 절차 : 단계 표 */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '도입 절차',
     kicker: '4단계 21주. 고객 준비 사항은 단계마다 미리 확정합니다',
-    num: '04', chapter: CH.plan, page: 6,
+    num: '04', chapter: CH.plan, page: 9,
   });
   table(s,
     ['단계', '기간', '주요 활동', '고객 준비 사항'],
@@ -403,13 +486,13 @@ const CH = {
   s.addNotes('원문 4절 표. 표 데이터라 네이티브 표로 넣었다. 하단 한 줄은 원문에 없지만 발표에서 반드시 짚어야 하는 리스크.');
 }
 
-/* 7 — 5절 일정 : 레이아웃 C (타임라인 + 수치 패널) */
+/* 5절 일정 : 레이아웃 C (타임라인 + 수치 패널) */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '일정',
     kicker: '계약 체결 후 약 6개월 만에 양산에 들어갑니다',
-    num: '05', chapter: CH.plan, page: 7,
+    num: '05', chapter: CH.plan, page: 10,
   });
   const marks = [
     ['2026. 04. 30', '계약 체결'],
@@ -461,13 +544,15 @@ const CH = {
   s.addNotes('레이아웃 C. 우측 패널 수치 48pt는 이 슬라이드에서 하나만 쓴다. 마지막 마일스톤만 블루로 강조.');
 }
 
-/* 8 — 6절 투자 비용 : 표 + 금액 패널 */
+addChapterCover(3);
+
+/* 6절 투자 비용 : 표 + 금액 패널 */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '투자 비용',
     kicker: '초도 물량 기준 2억 6,500만 원입니다 (부가세 별도)',
-    num: '06', chapter: CH.cost, page: 8,
+    num: '06', chapter: CH.cost, page: 12,
   });
   table(s,
     ['항목', '수량', '단가', '금액'],
@@ -505,13 +590,13 @@ const CH = {
   s.addNotes('원문 6절 표 그대로. 우측 환산값(1대당 631원)은 총액 265,000,000 / 420,000 을 발표용으로 덧붙인 것.');
 }
 
-/* 9 — 7절 기대 효과 : 레이아웃 F (첫 칸 대표) */
+/* 7절 기대 효과 : 레이아웃 F (첫 칸 대표) */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '기대 효과',
     kicker: '유출 경로 하나를 없애고, 감사 대응 시간을 3일에서 반나절로 줄입니다',
-    num: '07', chapter: CH.cost, page: 9,
+    num: '07', chapter: CH.cost, page: 13,
   });
   const effects = [
     ['대표 효과', '유출 경로 1개 제거', '열쇠 파일 외부 보관이 사라져 공장 서버를 통한 유출 경로가 없어집니다.', true],
@@ -544,13 +629,15 @@ const CH = {
   s.addNotes('레이아웃 F. 첫 칸만 네이비 — 세 효과가 동급이 아니라는 뜻이다. 원문 7절은 나열이지만 발표는 우선순위를 정해야 한다.');
 }
 
-/* 10 — 8절 회사 소개 : 레이아웃 I */
+addChapterCover(4);
+
+/* 8절 회사 소개 : 레이아웃 I */
 {
   const s = pptx.addSlide();
   chrome(s, {
     title: '회사 소개',
     kicker: '2009년 설립, 스마트미터 제조사 4곳에 누적 320만 개를 공급했습니다',
-    num: '08', chapter: CH.co, page: 10,
+    num: '08', chapter: CH.co, page: 15,
   });
   const rows = [
     ['설립', '2009년'],
@@ -577,10 +664,30 @@ const CH = {
   s.addNotes('레이아웃 I. 실적 숫자(320만 개, 4곳)가 이 슬라이드의 근거. CC EAL4+는 질문이 나오면 상세히.');
 }
 
-/* 11 — 9절 문의처 : 클로징 */
+/* 전면 메시지 : 레이아웃 J — 결정 시점을 한 장으로 못 박는다 */
 {
   const s = pptx.addSlide();
-  s.addShape('rect', { x: 0, y: 0, w: G.W, h: G.H, fill: { color: C.deepNavy } });
+  darkBg(s);
+  chrome(s, {
+    title: '결정 시점',
+    num: '09', chapter: '', page: 16, dark: true,   // 특정 챕터에 속하지 않는 마무리 장
+  });
+  s.addText('2026년 4월 계약이\n마지노선입니다', {
+    x: G.m, y: 4.20, w: 14.90, h: 2.60,
+    fontFace: FONT, fontSize: T.hero, bold: true, color: C.white,
+    charSpacing: track(T.hero, -3.5), lineSpacingMultiple: 1.12, valign: 'top',
+  });
+  s.addText('계약부터 양산까지 약 6개월이 필요합니다. 4월을 넘기면 2027년 요구사항 시행 시점에\n초도 물량을 맞출 수 없습니다.', {
+    x: G.m, y: 7.10, w: 13.95, h: 1.38,
+    fontFace: FONT, fontSize: T.sub, color: C.panelBg2, lineSpacingMultiple: 1.4, valign: 'top',
+  });
+  s.addNotes('레이아웃 J. 이 발표에서 상대가 가져가야 할 문장 하나. 여기서 질문을 받고 클로징으로 넘어간다.');
+}
+
+/* 9절 문의처 : 클로징 */
+{
+  const s = pptx.addSlide();
+  darkBg(s);
   s.addText('Secure by design', {
     x: 0, y: 4.30, w: G.W, h: 1.14,
     fontFace: FONT, fontSize: T.close, bold: true, color: C.white,
@@ -599,8 +706,9 @@ const CH = {
     x: 0, y: 8.00, w: G.W, h: 0.41,
     fontFace: FONT, fontSize: T.cap, color: C.muted, align: 'center',
   });
+  wordmark(s, { x: 9.25, y: 3.30, align: 'center' });   // 원본은 이 자리에 로고
   s.addNotes('클로징. 원본 템플릿의 "Safe with us" 자리. 담당자 두 명을 함께 띄워 두고 질의응답으로 넘어간다.');
 }
 
-pptx.writeFile({ fileName: 'example_proposal_deck.pptx' })
-  .then(() => console.log('example_proposal_deck.pptx 생성 완료 — 11 슬라이드'));
+pptx.writeFile({ fileName: path.join(__dirname, 'example_proposal_deck.pptx') })
+  .then(() => console.log(`example_proposal_deck.pptx 생성 완료 — ${pptx.slides.length} 슬라이드`));
