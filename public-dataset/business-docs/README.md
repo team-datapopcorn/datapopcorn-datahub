@@ -29,7 +29,7 @@ https://github.com/team-datapopcorn/datapopcorn-datahub/tree/main/public-dataset
 |---|---|---|
 | `references/회사소개.txt` | ch02 | `@` 로 파일 가리켜 요약시키는 첫 실습 |
 | `references/가상메일.txt` | ch06 | 영문 메일 번역·요약·답변 초안 |
-| `references/지난제안서.md` | ch07 · ch09 | 구조 추출 → 새 제안서 초안 |
+| `references/지난제안서.md` | ch07 · ch09 | 구조 추출 → 새 제안서 초안. [`../ppt/`](../ppt/)의 사내 템플릿과 짝지어 **제안서 → 발표 덱** 실습에도 쓴다 |
 | `references/내부보고서양식.md` | ch07 | 회사 양식·말투에 맞춘 보고서 초안 |
 | `references/발표양식.md` | ch09 | 회사 발표 흐름에 맞춘 슬라이드 구성 |
 | `drafts/파트너미팅_회의록.txt` | ch08 · ch09 | 결정사항·쟁점·담당자·기한 추출 |
