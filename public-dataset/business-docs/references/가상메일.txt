@@ -1,0 +1,22 @@
+From: Partner A Business Development Team <bd@partner-a.example.com>
+To: Global Sales Team <global@safechip.example.com>
+Date: Mon, 15 Jun 2026 09:12:00 +0900
+Subject: Request for product overview and integration timeline
+
+Dear Team,
+
+We are reviewing several security solution options for a customer project scheduled for Q4. Before we arrange a technical meeting, could you share a short product overview and a high-level integration timeline?
+
+The customer is particularly interested in the following points:
+
+1. Typical implementation steps
+2. Required preparation from the customer side
+3. Whether certification-related documents can be shared during the review stage
+4. Estimated timeline from initial review to pilot testing
+
+Please do not include confidential design details at this stage. A summary version would be sufficient for our internal discussion.
+
+If possible, we would appreciate receiving the material by next Friday.
+
+Best regards,
+Partner A Business Development Team
