@@ -14,9 +14,38 @@ import { registerGuideTools, SERVER_INSTRUCTIONS } from "./tools/guide.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const MCP_PATH = process.env.MCP_PATH || "/mcp";
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
+const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 60;
+const MAX_RATE_LIMIT_KEYS = Number(process.env.MAX_RATE_LIMIT_KEYS) || 10_000;
+const requestCounts = new Map();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LANDING_PAGE = readFileSync(join(__dirname, "public", "index.html"));
+
+function clientKey(req) {
+  return req.socket.remoteAddress || "unknown";
+}
+
+function pruneRateLimitState(now) {
+  for (const [key, state] of requestCounts) {
+    if (now - state.startedAt >= RATE_LIMIT_WINDOW_MS) requestCounts.delete(key);
+  }
+}
+
+function isRateLimited(req, now = Date.now()) {
+  pruneRateLimitState(now);
+  const key = clientKey(req);
+  const current = requestCounts.get(key);
+  const state = current || { startedAt: now, count: 0 };
+
+  if (!current && requestCounts.size >= MAX_RATE_LIMIT_KEYS) {
+    return true;
+  }
+
+  state.count += 1;
+  requestCounts.set(key, state);
+  return state.count > RATE_LIMIT_MAX_REQUESTS;
+}
 
 function buildServer() {
   const server = new McpServer(
@@ -31,7 +60,7 @@ function buildServer() {
 }
 
 const httpServer = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const url = new URL(req.url, "http://localhost");
 
   if (url.pathname === "/" && req.method === "GET") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -41,6 +70,15 @@ const httpServer = http.createServer(async (req, res) => {
 
   if (url.pathname !== MCP_PATH) {
     res.writeHead(404, { "Content-Type": "text/plain" }).end("Not Found");
+    return;
+  }
+
+  if (isRateLimited(req)) {
+    res.writeHead(429, {
+      "Content-Type": "application/json",
+      "Retry-After": String(Math.ceil(RATE_LIMIT_WINDOW_MS / 1_000)),
+    });
+    res.end(JSON.stringify({ error: "rate_limited" }));
     return;
   }
 

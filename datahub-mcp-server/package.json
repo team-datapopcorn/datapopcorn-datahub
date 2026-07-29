@@ -10,10 +10,14 @@
   },
   "scripts": {
     "start": "node index.js",
-    "start:http": "node http.js"
+    "start:http": "node http.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^3.24.1"
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.76"
   }
 }

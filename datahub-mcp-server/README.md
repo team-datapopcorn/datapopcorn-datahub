@@ -17,7 +17,7 @@
   - `ai.datapopcorn.cloudflared-mcp` — `cloudflared tunnel run datahub-mcp`
   - 재부팅/크래시 시 `KeepAlive`로 자동 재시작
 - `NEIS_API_KEY`는 저 호스트의 plist에만 있음 — 이 저장소에는 안 들어감
-- 인증 없음 (지금은 NEIS 공개데이터만 서빙하니 의도적으로 생략, 새 소스 붙이기 전 추가 필요)
+- 인증 없음 (지금은 NEIS 공개데이터만 서빙하니 의도적으로 생략). HTTP 프로세스는 기본적으로 연결 출처당 분당 60회 제한하고 상태 키는 10,000개로 제한함. Cloudflare에서 실제 사용자 IP 기준의 동등하거나 더 엄격한 rate-limit 규칙을 유지할 것. 새 소스 붙이기 전 인증 추가 필요.
 
 ## 구성
 
@@ -27,7 +27,7 @@
 - `tools/neis.js` — 1호 소스. NEIS Open API 급식/학교 정보를 라이브로 조회. 툴 이름은 전부 `neis_` 접두어. index.js/http.js 둘 다 이 모듈을 등록해서 씀.
   - `neis_list_office_codes` — 지역명 -> 시도교육청 코드 매핑
   - `neis_search_schools` — 학교 검색 (schoolInfo API)
-  - `neis_get_meals` — 급식 정보 조회, 페이지네이션 자동 처리 (mealServiceDietInfo API)
+  - `neis_get_meals` — 급식 정보 조회. `officeCode` + `schoolCode` + 날짜 조건(`date` 또는 `fromDate`+`toDate`)으로 조회. 날짜는 `YYYYMMDD`, 기간은 최대 31일이며 결과는 최대 10페이지/1,000건으로 제한.
 
 ## 실행 (로컬, stdio)
 
@@ -36,7 +36,7 @@ npm install
 NEIS_API_KEY=발급받은키 npm start
 ```
 
-`NEIS_API_KEY` 안 주면 `sample` 키로 동작 (rate/size 제한 있음).
+`NEIS_API_KEY`는 필수. 키가 없으면 NEIS API 호출은 MCP 오류(`isError`)로 반환됨.
 
 ## 실행 (원격 배포용, HTTP)
 
@@ -45,9 +45,7 @@ npm install
 PORT=3000 NEIS_API_KEY=발급받은키 npm run start:http
 ```
 
-기본 경로는 `/mcp`, `MCP_PATH` 환경변수로 바꿀 수 있음. 이 프로세스 자체는 인증/HTTPS 없음 —
-앞단에서 TLS 종료하고 도메인 붙이는 걸 전제로 함. 지금은 공개 데이터(NEIS)만
-서빙하니 인증 없이 노출해도 괜찮지만, 개인 건강/재무 같은 소스 붙이는 순간 인증 레이어 반드시 추가할 것.
+기본 경로는 `/mcp`, `MCP_PATH` 환경변수로 바꿀 수 있음. HTTP 프로세스는 `RATE_LIMIT_WINDOW_MS`(기본 60,000ms), `RATE_LIMIT_MAX_REQUESTS`(기본 연결 출처당 60회), `MAX_RATE_LIMIT_KEYS`(기본 10,000개)로 인메모리 요청 제한을 적용함. 프록시 헤더는 신뢰하지 않으므로, Cloudflare에서 실제 사용자 IP 기준 rate-limit도 설정할 것. 이 프로세스 자체는 인증/HTTPS 없음 — 앞단에서 TLS 종료하고 도메인 붙이는 걸 전제로 함. 지금은 공개 데이터(NEIS)만 서빙하니 인증 없이 노출하지만, 개인 건강/재무 같은 소스 붙이는 순간 인증 레이어 반드시 추가할 것.
 
 **실제로 쓴 방식: Cloudflare Tunnel** (공인 IP/포트포워딩/방화벽 설정 없이 홈서버·노트북에서도 됨, 도메인이
 Cloudflare에 있으면 이 방식이 제일 간단):

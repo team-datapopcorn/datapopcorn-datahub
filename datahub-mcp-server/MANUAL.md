@@ -5,11 +5,11 @@
 
 ## 0. 사전 준비물
 
-- Node.js 18 이상 설치되어 있어야 함. 터미널에 아래 입력해서 버전 확인:
+- Node.js 20 이상 설치되어 있어야 함. 터미널에 아래 입력해서 버전 확인:
   ```
   node -v
   ```
-  숫자가 `v18.x.x` 이상이면 OK. 없다면 https://nodejs.org 에서 LTS 버전 설치.
+  숫자가 `v20.x.x` 이상이면 OK. 없다면 https://nodejs.org 에서 LTS 버전 설치.
 
 ## 1. 프로젝트 위치로 이동
 
@@ -25,9 +25,9 @@ npm install
 
 한 번만 하면 됨. `node_modules` 폴더 생기면 성공.
 
-## 3. NEIS API 키 발급받기 (선택)
+## 3. NEIS API 키 발급받기 (필수)
 
-키 없어도 `sample` 키로 동작은 하는데, 조회 결과가 1페이지/5건으로 제한됨. 제대로 쓰려면:
+이 서버는 NEIS API 키가 있어야 학교/급식 데이터를 조회할 수 있음:
 
 1. https://open.neis.go.kr 접속
 2. 회원가입 후 "인증키 신청" 메뉴에서 키 발급 신청
@@ -39,8 +39,7 @@ npm install
 NEIS_API_KEY=발급받은키붙여넣기 npm start
 ```
 
-키 없으면 그냥 `npm start`만 실행해도 됨(sample 키로 동작). 터미널이 멈춘 것처럼 보이는 게 정상 —
-서버가 계속 대기 중이라는 뜻. 끄려면 `Ctrl + C`.
+`NEIS_API_KEY`를 반드시 설정할 것. stdio 서버는 실행 후 입력을 기다리는 상태가 정상이며, 끄려면 `Ctrl + C`.
 
 ## 5. Claude Code에 등록하기
 
@@ -93,7 +92,7 @@ Claude Desktop 앱은 "Settings > Connectors" 화면에 직접 명령 실행형 
 ```
 
 기존에 다른 `mcpServers` 항목 있으면 `datahub` 블록만 추가하면 됨 (콤마 잘 챙기기).
-`NEIS_API_KEY` 없으면 `env` 통째로 빼도 됨 (sample 키로 동작).
+`NEIS_API_KEY`는 필수. 키를 생략하면 학교/급식 툴은 MCP 오류로 응답함.
 
 4. 파일 저장
 5. Claude 데스크탑 완전히 종료 후(맥은 `Cmd+Q`, 트레이 아이콘에서 종료) 재실행
@@ -170,7 +169,7 @@ Claude가 알아서 `neis_list_office_codes`, `neis_search_schools`, `neis_get_m
 | `npm start` 하자마자 바로 꺼짐 | 에러 메시지 확인, `node index.js`로 직접 실행해서 로그 보기 |
 | Claude Code에서 툴이 안 보임 | `claude mcp list`로 등록 확인, 안 되어 있으면 5번 다시 |
 | Claude 데스크탑에서 툴이 안 보임 | config json 문법 오류(콤마/괄호) 확인, 저장 후 앱 완전 종료했다가 재실행했는지 확인 |
-| 급식/학교 조회 결과가 이상하게 적음 | `sample` 키 쓰는 중일 가능성 큼 — 3번에서 진짜 키 발급받기 |
+| 급식/학교 조회가 `NEIS 오류: NEIS_API_KEY가 설정되지 않았습니다.`로 실패 | 3번에서 발급한 키를 Claude Code/Claude Desktop의 `NEIS_API_KEY` 환경변수에 설정 |
 | "NEIS API HTTP xxx" 에러 | NEIS 서버 쪽 문제거나 파라미터(officeCode/schoolCode) 오타 확인 |
 | `curl`로 `/mcp` 호출했는데 404 | `MCP_PATH` 환경변수 바꿨는지 확인, 리버스 프록시 경로 설정 다시 확인 |
 | HTTP 모드에서 응답이 뚝뚝 끊김 | 리버스 프록시에서 `proxy_buffering off` (SSE 스트리밍용) 빠졌는지 확인 |
