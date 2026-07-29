@@ -7,7 +7,7 @@ const GUIDE_TEXT = `# datahub-mcp-server 사용 가이드
 
 - \`neis_list_office_codes\` — 지역명(서울/부산/제주 등) -> 시도교육청 코드 매핑. 다른 툴 쓰기 전에 코드 모르면 먼저 호출.
 - \`neis_search_schools\` — 학교 검색. \`officeCode\`(필수, 예: B10) + \`schoolName\`(선택, 부분 일치)으로 학교코드(SD_SCHUL_CODE) 찾기.
-- \`neis_get_meals\` — 급식 정보 조회. \`officeCode\` + \`schoolCode\`(neis_search_schools로 찾은 값) + 날짜 조건(\`date\` 또는 \`fromDate\`/\`toDate\`)으로 조회, 여러 페이지 자동 처리.
+- \`neis_get_meals\` — 급식 정보 조회. \`officeCode\` + \`schoolCode\`(neis_search_schools로 찾은 값) + 날짜 조건(\`date\` 또는 \`fromDate\`/\`toDate\`)으로 조회. 날짜는 YYYYMMDD 형식이며 범위는 최대 31일, 결과는 최대 10페이지/1,000건.
 
 일반적인 흐름: neis_list_office_codes로 지역 코드 확인 → neis_search_schools로 학교코드 확인 → neis_get_meals로 급식 조회.
 학교코드를 이미 알고 있으면 앞 단계 생략 가능.
