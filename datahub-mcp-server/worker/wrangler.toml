@@ -1,0 +1,13 @@
+name = "datapopcorn-datahub-mcp"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+account_id = "6647a1f7aa58954faaffdf4e042f305a"
+workers_dev = false
+
+rules = [
+  { type = "Text", globs = ["**/*.html"], fallthrough = true }
+]
+
+routes = [
+  { pattern = "api.datapopcorn.ai", custom_domain = true }
+]
