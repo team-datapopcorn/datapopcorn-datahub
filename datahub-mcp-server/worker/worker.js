@@ -1,7 +1,8 @@
 import LANDING_PAGE from "./landing.html";
+import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.2.0";
+const SERVER_VERSION = "0.3.0";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "개인 데이터허브(datapopcorn)를 노출하는 MCP 서버. 처음 사용하거나 어떤 툴을 써야 할지 모르면 " +
@@ -22,11 +23,22 @@ const GUIDE_TEXT = `# datahub-mcp-server 사용 가이드
 
 새 소스가 추가되면 그 소스도 자기 접두어(예: \`haerapy_\`, \`golf_\`)를 씀 — 이름이 겹치거나 헷갈릴 일 없게 하기 위함.
 
+## 데이터 분석 스킬 (데이터팝콘 분석 4단계) — 툴 이름 전부 \`analysis_\` 접두어
+
+① 가설 → ② 수집 → ③ 의심 → ④ 정리 순서로 분석을 진행하게 돕는 지침과 점검 도구.
+
+- \`analysis_get_skill\` — 단계별 작업 지침. \`stage\`: pipeline / 1-hypothesis / 2-collect / 3-suspect / 4-report. 분석 시작 시 pipeline부터.
+- \`analysis_traps_checklist\` — 결론 전에 통과할 함정 10개(트렌드 분석이면 \`trend: true\`로 6개 추가) traps_check.md 양식.
+- \`analysis_suspect_numbers\` — 숫자 배열(+날짜·세그먼트 건수)을 넣으면 표본 크기, 평균 vs 중앙값, 이상치, 기간 공백, 기준 기간, 급변점을 계산해 traps_check.md 초안을 줌.
+- 같은 지침을 MCP 프롬프트(\`analysis_pipeline\`, \`analysis_1_hypothesis\` ~ \`analysis_4_report\`)와 리소스(\`datapopcorn://skills/...\`)로도 제공.
+
 ## 사용 예시 (자연어로 그냥 물어보면 됨)
 
 - "서울 지역 학교 코드 알려줘"
 - "서울 B10, 가락고등학교 학교코드 찾아줘"
 - "서울 B10, 학교코드 7010057 학교 이번 달 급식 알려줘"
+- "우리 가게 월 매출이 왜 떨어지는지 분석하고 싶어. 데이터팝콘 4단계로 시작해줘"
+- "월별 방문자 [120, 118, 125, 240, 230]인데 4월 급증 믿어도 돼?"
 
 ## 참고
 
@@ -58,7 +70,7 @@ const OFFICE_CODES = {
 
 const READ_ONLY = { readOnlyHint: true, openWorldHint: true };
 
-const TOOL_DEFINITIONS = [
+const TOOL_DEFINITIONS_BASE = [
   {
     name: "guide",
     description: "이 MCP 서버를 처음 쓰는 경우 가장 먼저 호출할 것. 서버 목적, 현재 등록된 데이터 소스, 각 툴 사용법과 예시를 안내합니다.",
@@ -111,6 +123,8 @@ class JsonRpcError extends Error {
     this.code = code;
   }
 }
+
+const TOOL_DEFINITIONS = [...TOOL_DEFINITIONS_BASE, ...ANALYSIS_TOOLS];
 
 export default {
   async fetch(request, env) {
@@ -251,6 +265,22 @@ async function handleRequest(message, env) {
       return { tools: TOOL_DEFINITIONS };
     case "tools/call":
       return callTool(message.params, env);
+    case "prompts/list":
+      return { prompts: listPrompts() };
+    case "prompts/get": {
+      const p = getPrompt(message.params?.name, message.params?.arguments || {});
+      if (!p) throw new JsonRpcError(ERROR_CODES.INVALID_PARAMS, `Unknown prompt: ${message.params?.name}`);
+      return p;
+    }
+    case "resources/list":
+      return { resources: listResources() };
+    case "resources/templates/list":
+      return { resourceTemplates: [] };
+    case "resources/read": {
+      const r = readResource(message.params?.uri);
+      if (!r) throw new JsonRpcError(ERROR_CODES.INVALID_PARAMS, `Unknown resource: ${message.params?.uri}`);
+      return r;
+    }
     default:
       throw new JsonRpcError(ERROR_CODES.METHOD_NOT_FOUND, `Unknown method: ${message.method}`);
   }
@@ -261,7 +291,7 @@ function initializeResult(params = {}) {
   const protocolVersion = SUPPORTED_PROTOCOL_VERSIONS.has(requestedVersion) ? requestedVersion : LATEST_PROTOCOL_VERSION;
   return {
     protocolVersion,
-    capabilities: { tools: {} },
+    capabilities: { tools: {}, prompts: {}, resources: {} },
     serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
     instructions: SERVER_INSTRUCTIONS,
   };
@@ -293,6 +323,13 @@ async function callTool(params, env) {
     throw new JsonRpcError(ERROR_CODES.INVALID_PARAMS, "tools/call params.name is required.");
   }
   const args = params.arguments || {};
+  if (ANALYSIS_TOOL_NAMES.has(params.name)) {
+    try {
+      return asText(callAnalysisTool(params.name, args));
+    } catch (error) {
+      return { content: [{ type: "text", text: `입력 오류: ${error.message}` }], isError: true };
+    }
+  }
   switch (params.name) {
     case "guide":
       return asText(GUIDE_TEXT);
