@@ -1,1 +1,0 @@
-{"clientId":"0KFmFYzmjvxMdPwG","redirectUris":["http://127.0.0.1:33418/callback"],"clientName":"Test Client","grantTypes":["authorization_code","refresh_token"],"responseTypes":["code"],"registrationDate":1794481375,"tokenEndpointAuthMethod":"none","authMethodExplicit":true,"registrationExpiresAt":1802257375}
