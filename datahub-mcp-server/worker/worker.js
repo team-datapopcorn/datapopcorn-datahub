@@ -2,10 +2,11 @@ import LANDING_PAGE from "./landing.html";
 import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
 import { handleAuthRoutes } from "./auth.js";
 import { recordRpc, handleAdmin } from "./usage.js";
+import { geo, appName, hostOf } from "./context.js";
 import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.4.0";
+const SERVER_VERSION = "0.4.2";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "개인 데이터허브(datapopcorn)를 노출하는 MCP 서버. 처음 사용하거나 어떤 툴을 써야 할지 모르면 " +
@@ -431,7 +432,15 @@ const publicService = {
     const admin = await handleAdmin(request, env);
     if (admin) return admin;
     if (url.pathname === "/" && request.method === "GET") {
-      return new Response(LANDING_PAGE, { headers: { "content-type": "text/html; charset=utf-8" } });
+      const headers = new Headers({ "content-type": "text/html; charset=utf-8" });
+      // 첫 방문 유입 기록(이미 있으면 유지): 어디서 왔는지(referrer 호스트)와 utm 태그만
+      if (!/(?:^|;\s*)dp_mcp_ref=/.test(request.headers.get("cookie") || "")) {
+        const q = url.searchParams, rh = hostOf(request.headers.get("referer") || "");
+        const ref = { s: q.get("utm_source"), m: q.get("utm_medium"), c: q.get("utm_campaign"), h: rh && rh !== url.hostname ? rh : null, p: "api.datapopcorn.ai/", t: Date.now() };
+        const v = btoa(JSON.stringify(ref)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        headers.append("set-cookie", `dp_mcp_ref=${v}; Domain=.datapopcorn.ai; Path=/; Max-Age=7776000; Secure; SameSite=Lax`);
+      }
+      return new Response(LANDING_PAGE, { headers });
     }
     if (url.pathname === "/health") {
       return jsonResponse({ status: "ok", server: SERVER_NAME, version: SERVER_VERSION, auth: "oauth2.1", runtime: "cloudflare-workers", timestamp: new Date().toISOString() });
@@ -452,11 +461,19 @@ export default new OAuthProvider({
       if (request.method === "POST") {
         try {
           const body = await request.clone().json();
-          messages = (Array.isArray(body) ? body : [body]).map((m) => ({ method: m?.method, tool: m?.method === "tools/call" ? m?.params?.name : null }));
+          messages = (Array.isArray(body) ? body : [body]).map((m) => ({
+            method: m?.method,
+            tool: m?.method === "tools/call" ? m?.params?.name : null,
+            clientName: m?.method === "initialize" ? m?.params?.clientInfo?.name : null,
+            clientVer: m?.method === "initialize" ? m?.params?.clientInfo?.version : null,
+          }));
         } catch {}
       }
       const res = await mcpService.fetch(request, env);
-      const rec = recordRpc(env, { userId: ctx.props?.userId || ctx.auth?.userId, clientId: ctx.auth?.clientId, messages, ok: res.status < 400, ms: Date.now() - t0 }).catch((e) => console.error("usage log", e?.message));
+      const ua = request.headers.get("user-agent") || "";
+      const init = messages.find((m) => m.clientName);
+      const c = { ...geo(request), ua, app: appName(init?.clientName || "", ua), app_ver: init?.clientVer ? String(init.clientVer).slice(0, 30) : null };
+      const rec = recordRpc(env, { userId: ctx.props?.userId || ctx.auth?.userId, clientId: ctx.auth?.clientId, messages, ok: res.status < 400, ms: Date.now() - t0, ctx: c }).catch((e) => console.error("usage log", e?.message));
       ctx.waitUntil?.(rec);
       return res;
     },

@@ -7,6 +7,7 @@
 //   3) completeAuthorization → 클라이언트가 /token에서 토큰을 받는다(토큰·코드는 KV에 해시로만 저장).
 // 비밀값: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (wrangler secret). 사용자 기록: OAUTH_KV "dp-user:<google sub>".
 import { recordLogin } from "./usage.js";
+import { geo, browserInfo, readRef, hostOf } from "./context.js";
 import { AuthorizationError, CimdFetchError, authorizationErrorRedirect } from "@cloudflare/workers-oauth-provider";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -61,7 +62,7 @@ function randomString(bytes = 32) {
   return btoa(String.fromCharCode(...a)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-function consentBody(d, handle) {
+function consentBody(d, handle, authRef = "") {
   const scopes = (d.scope || []).map((s) => `<input type="hidden" name="scope" value="${esc(s)}">`).join("");
   const origin = d.clientDomain
     ? `게시자: <strong>${esc(d.clientDomain)}</strong>`
@@ -70,7 +71,7 @@ function consentBody(d, handle) {
 <div class="box">${origin}<br>권한을 받을 곳: <strong>${esc(d.redirectHost)}</strong><br>권한: 데이터 MCP 도구 호출 (읽기 전용)</div>
 ${d.redirectIsLoopback ? '<div class="warn">이 컴퓨터에서 실행 중인 앱으로 권한이 전달돼요. 방금 직접 연결을 시작했을 때만 계속하세요.</div>' : ""}
 <form method="post" action="/authorize">
-<input type="hidden" name="handle" value="${esc(handle)}">${scopes}
+<input type="hidden" name="handle" value="${esc(handle)}"><input type="hidden" name="ar" value="${esc(authRef)}">${scopes}
 <button class="btn" name="decision" value="approve">${googleIcon} Google로 계속하기</button>
 <button class="ghost" name="decision" value="deny">취소</button>
 </form>
@@ -103,7 +104,8 @@ export async function handleAuthRoutes(request, env) {
       const authRequest = await oauth.parseAuthRequest(request);
       const details = await oauth.describeConsent(authRequest);
       const consent = await oauth.beginConsent(authRequest);
-      return page("연결 허용", consentBody(details, consent.handle), 200, consent.headers);
+      const rh = hostOf(request.headers.get("referer") || "");
+      return page("연결 허용", consentBody(details, consent.handle, rh && rh !== url.hostname ? rh : ""), 200, consent.headers);
     } catch (err) {
       return handleAuthError(err);
     }
@@ -120,7 +122,8 @@ export async function handleAuthRoutes(request, env) {
       }
       const approved = await oauth.approveConsent(request, handle, { scope: form.getAll("scope").map(String) });
       const verifier = randomString(48);
-      const { state, headers } = await oauth.beginUpstream(approved.request, { data: { verifier }, headers: approved.headers });
+      const ar = String(form.get("ar") || "").replace(/[^a-z0-9.-]/gi, "").slice(0, 80) || null;
+      const { state, headers } = await oauth.beginUpstream(approved.request, { data: { verifier, ar }, headers: approved.headers });
       const g = new URL(GOOGLE_AUTH);
       g.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
       g.searchParams.set("redirect_uri", `${url.origin}/callback`);
@@ -163,7 +166,7 @@ export async function handleAuthRoutes(request, env) {
       const info = await ui.json();
       if (!info.sub || !info.email || info.email_verified !== true) return errorPage("이메일 인증이 끝난 Google 계정만 쓸 수 있어요.", 403);
       const user = await upsertUser(env, info);
-      try { await recordLogin(env, { userId: `google_${info.sub}`, email: info.email, name: info.name || "" }); } catch (e) { console.error("login log", e?.message); }
+      try { const ua = request.headers.get("user-agent") || ""; await recordLogin(env, { userId: `google_${info.sub}`, email: info.email, name: info.name || "" }, { ...geo(request), ...browserInfo(ua), ua, ...readRef(request), auth_referer: data.ar || null }); } catch (e) { console.error("login log", e?.message); }
       if (user.blocked) return errorPage("이 계정은 사용이 중지됐어요. contact@datapopcorn.ai로 문의해 주세요.", 403);
       const { redirectTo } = await oauth.completeAuthorization({
         request: original,
