@@ -20,6 +20,7 @@
 - 비밀값: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (`npx wrangler secret put`). KV: `OAUTH_KV`
 - 사용 기록(v0.4.1): D1 `datapopcorn-mcp-usage`(`USAGE_DB`)의 `users`·`events`·`clients`. 로그인과 MCP 요청의 method·도구 이름·성공 여부·응답 시간만 남기고 도구 인자는 저장하지 않는다. 스키마는 `migrations/`(`npx wrangler d1 migrations apply datapopcorn-mcp-usage --remote`)
 - 맥락 기록(v0.4.2, `context.js`): 로그인 시 Cloudflare 기준 국가·지역·도시·네트워크(ASN 조직명), 브라우저 기기·OS·브라우저, 로그인을 시작한 사이트(Referer 호스트), 첫 방문 유입 쿠키 `dp_mcp_ref`(datapopcorn.ai/data-mcp와 이 서버 첫 화면이 심음, referrer 호스트·utm, 90일). MCP 요청은 User-Agent·initialize의 clientInfo로 앱 이름(Claude Code, Codex, ChatGPT, Aside 등)과 요청 출발지(사용자 기기/클라우드, ASN 추정). IP 원문은 저장하지 않는다
+- 보관·삭제(v0.4.3, 개인정보처리방침 9항과 일치): 매일 03:00 KST cron이 1년 지난 이용 기록과 마지막 로그인 후 1년 지난 계정(기록 포함)을 삭제. 탈퇴 요청은 `POST /admin/delete-user {"email": "..."}`(ADMIN_TOKEN)로 D1·KV 삭제와 토큰 폐기
 - 관리자 통계: `GET /admin/stats` (`Authorization: Bearer <ADMIN_TOKEN>`). dashboard.datapopcorn.ai의 "MCP 사용자" 탭이 원격 맥 `data/mcp-admin-token`으로 중계한다(대표 계정만)
 - 사용자 목록: `npx wrangler kv key list --binding OAUTH_KV --remote --prefix dp-user:` (이메일·가입일·마지막 로그인). 차단은 해당 키의 `blocked`를 true로
 

@@ -1,12 +1,12 @@
 import LANDING_PAGE from "./landing.html";
 import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
 import { handleAuthRoutes } from "./auth.js";
-import { recordRpc, handleAdmin } from "./usage.js";
+import { recordRpc, handleAdmin, purgeExpired } from "./usage.js";
 import { geo, appName, hostOf } from "./context.js";
 import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.4.2";
+const SERVER_VERSION = "0.4.3";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "개인 데이터허브(datapopcorn)를 노출하는 MCP 서버. 처음 사용하거나 어떤 툴을 써야 할지 모르면 " +
@@ -451,7 +451,7 @@ const publicService = {
 
 const ORIGIN = "https://api.datapopcorn.ai";
 
-export default new OAuthProvider({
+const provider = new OAuthProvider({
   apiRoute: "/mcp",
   apiHandler: {
     // 호출 기록: JSON-RPC 메시지의 method와 도구 이름만 남긴다(인자 X). 기록 실패가 응답을 막지 않게 waitUntil.
@@ -493,3 +493,11 @@ export default new OAuthProvider({
   accessTokenTTL: 3600,
   refreshTokenTTL: 60 * 60 * 24 * 30,
 });
+
+export default {
+  fetch: (request, env, ctx) => provider.fetch(request, env, ctx),
+  // 매일 03:00 KST: 보관기간(1년) 지난 이용 기록과 1년간 로그인 없는 계정 삭제
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(purgeExpired(env).then((r) => console.log("purge", JSON.stringify(r))));
+  },
+};

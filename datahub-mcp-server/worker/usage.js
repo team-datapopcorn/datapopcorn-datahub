@@ -55,10 +55,18 @@ function timingSafeEqual(a, b) {
 
 export async function handleAdmin(request, env) {
   const url = new URL(request.url);
-  if (url.pathname !== "/admin/stats") return null;
+  if (!["/admin/stats", "/admin/delete-user"].includes(url.pathname)) return null;
   const auth = request.headers.get("authorization") || "";
   if (!env.ADMIN_TOKEN || !auth.startsWith("Bearer ") || !timingSafeEqual(auth.slice(7), env.ADMIN_TOKEN)) {
     return Response.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (url.pathname === "/admin/delete-user") {
+    if (request.method !== "POST") return Response.json({ error: "POST only" }, { status: 405 });
+    const { email } = await request.json().catch(() => ({}));
+    if (!email) return Response.json({ error: "email required" }, { status: 400 });
+    const rows = (await env.USAGE_DB.prepare(`SELECT user_id FROM users WHERE lower(email) = lower(?1)`).bind(String(email)).all()).results || [];
+    for (const r of rows) await deleteUser(env, r.user_id);
+    return Response.json({ deleted: rows.length });
   }
   const db = env.USAGE_DB;
   const today = kstDay(), d7 = kstDay(new Date(Date.now() - 6 * 864e5)), d30 = kstDay(new Date(Date.now() - 29 * 864e5));
@@ -116,4 +124,41 @@ export async function handleAdmin(request, env) {
     users: userRows.map(({ user_id, ...u }) => u),
     recent,
   }, { headers: { "cache-control": "no-store" } });
+}
+
+// 보관 정책 (개인정보처리방침과 일치시킬 것)
+// - 이용 기록(events): 1년 지나면 삭제
+// - 계정(users, KV dp-user): 마지막 로그인 후 1년이 지나면 삭제(그 사용자의 기록 포함)
+export const RETENTION_DAYS = 365;
+
+export async function purgeExpired(env) {
+  if (!env.USAGE_DB) return { events: 0, users: 0 };
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 864e5).toISOString();
+  const stale = (await env.USAGE_DB.prepare(`SELECT user_id FROM users WHERE COALESCE(last_login_at, created_at) < ?1`).bind(cutoff).all()).results || [];
+  let users = 0;
+  for (const u of stale) { await deleteUser(env, u.user_id); users++; }
+  const r = await env.USAGE_DB.prepare(`DELETE FROM events WHERE ts < ?1`).bind(cutoff).run();
+  await env.USAGE_DB.prepare(`DELETE FROM clients WHERE client_id NOT IN (SELECT DISTINCT client_id FROM events WHERE client_id IS NOT NULL)`).run();
+  return { events: r.meta?.changes || 0, users };
+}
+
+// 계정 삭제(탈퇴 요청·보관기간 만료): D1 사용자·기록, KV 사용자 기록, 발급된 토큰(grant) 폐기
+export async function deleteUser(env, userId) {
+  await env.USAGE_DB.batch([
+    env.USAGE_DB.prepare(`DELETE FROM events WHERE user_id = ?1`).bind(userId),
+    env.USAGE_DB.prepare(`DELETE FROM users WHERE user_id = ?1`).bind(userId),
+  ]);
+  const sub = String(userId).replace(/^google_/, "");
+  await env.OAUTH_KV.delete(`dp-user:${sub}`);
+  try {
+    const api = env.OAUTH_PROVIDER;
+    if (api?.listUserGrants) {
+      let cursor;
+      do {
+        const page = await api.listUserGrants(userId, { cursor });
+        for (const g of page.items || []) await api.revokeGrant(g.id, userId);
+        cursor = page.cursor;
+      } while (cursor);
+    }
+  } catch (e) { console.error("grant revoke", e?.message); }
 }

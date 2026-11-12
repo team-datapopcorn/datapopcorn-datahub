@@ -23,3 +23,6 @@ binding = "USAGE_DB"
 database_name = "datapopcorn-mcp-usage"
 database_id = "d5935553-709b-40c2-b2d2-0a93ae51917d"
 migrations_dir = "migrations"
+
+[triggers]
+crons = ["0 18 * * *"]
