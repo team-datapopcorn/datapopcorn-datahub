@@ -1,8 +1,10 @@
 import LANDING_PAGE from "./landing.html";
+import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
+import { handleAuthRoutes } from "./auth.js";
 import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.3.0";
+const SERVER_VERSION = "0.4.0";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "개인 데이터허브(datapopcorn)를 노출하는 MCP 서버. 처음 사용하거나 어떤 툴을 써야 할지 모르면 " +
@@ -42,8 +44,8 @@ const GUIDE_TEXT = `# datahub-mcp-server 사용 가이드
 
 ## 참고
 
-- 지금은 공개 데이터(NEIS)만 있어서 인증 없이 열려 있음. 개인 건강/재무 등 비공개 소스가 추가되면
-  인증이 붙을 예정 — 그 전까지는 아무나 호출 가능한 읽기 전용 서버.
+- 데이터팝콘 계정(Google 로그인)으로 가입·로그인한 사용자만 호출할 수 있음. MCP 클라이언트에 주소만 넣으면
+  처음 연결할 때 로그인 창이 뜸. 모든 도구는 읽기 전용.
 `;
 const JSON_RPC_VERSION = "2.0";
 const LATEST_PROTOCOL_VERSION = "2025-11-25";
@@ -126,7 +128,8 @@ class JsonRpcError extends Error {
 
 const TOOL_DEFINITIONS = [...TOOL_DEFINITIONS_BASE, ...ANALYSIS_TOOLS];
 
-export default {
+// /mcp 본체. OAuthProvider가 토큰을 확인한 요청만 여기로 온다(ctx.props에 로그인한 사용자).
+const mcpService = {
   async fetch(request, env) {
     const url = new URL(request.url);
 
@@ -417,3 +420,40 @@ function corsHeaders() {
     "access-control-expose-headers": "mcp-session-id, Mcp-Session-Id",
   };
 }
+
+// 공개 페이지(/, /health)와 로그인 화면(/authorize, /callback). 나머지는 404.
+const publicService = {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const auth = await handleAuthRoutes(request, env);
+    if (auth) return auth;
+    if (url.pathname === "/" && request.method === "GET") {
+      return new Response(LANDING_PAGE, { headers: { "content-type": "text/html; charset=utf-8" } });
+    }
+    if (url.pathname === "/health") {
+      return jsonResponse({ status: "ok", server: SERVER_NAME, version: SERVER_VERSION, auth: "oauth2.1", runtime: "cloudflare-workers", timestamp: new Date().toISOString() });
+    }
+    return jsonResponse({ error: "not_found", endpoint: "/mcp" }, { status: 404 });
+  },
+};
+
+const ORIGIN = "https://api.datapopcorn.ai";
+
+export default new OAuthProvider({
+  apiRoute: "/mcp",
+  apiHandler: mcpService,
+  defaultHandler: publicService,
+  authorizeEndpoint: "/authorize",
+  tokenEndpoint: "/token",
+  clientRegistrationEndpoint: "/register",
+  scopesSupported: ["mcp", "offline_access"],
+  requiredScopes: ["mcp"],
+  resourceMetadata: {
+    resource: `${ORIGIN}/mcp`,
+    authorization_servers: [ORIGIN],
+    resource_name: "DataPopcorn Data MCP",
+  },
+  clientIdMetadataDocumentEnabled: true,
+  accessTokenTTL: 3600,
+  refreshTokenTTL: 60 * 60 * 24 * 30,
+});

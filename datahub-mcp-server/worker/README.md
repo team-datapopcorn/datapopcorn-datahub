@@ -8,6 +8,18 @@
 - 비밀값: `NEIS_API_KEY` (`npx wrangler secret put NEIS_API_KEY`). NEIS의 `sample` 키는 2026-11-03 기준 ERROR-290으로 거절됨
 - 배포: 이 폴더에서 `npx wrangler deploy`. `landing.html`은 `../public/index.html` 복사본이다
 
+## 인증 (v0.4.0, 2026-11-12)
+
+`/mcp`는 데이터팝콘 계정(Google 로그인)으로 가입·로그인한 사용자만 부를 수 있다. MCP 표준 OAuth 2.1 흐름이다.
+
+- 라이브러리: `@cloudflare/workers-oauth-provider` (토큰·코드는 KV에 해시로만 저장, props 암호화)
+- 토큰 없는 요청 → 401 + `WWW-Authenticate: Bearer resource_metadata=".../.well-known/oauth-protected-resource/mcp"`
+- 클라이언트 등록: DCR `/register`, CIMD 지원. 인가 `/authorize`(동의 화면 → Google 로그인 → `/callback`), 토큰 `/token`. PKCE S256 필수
+- 토큰: access 1시간, refresh 30일. 코드를 재사용하면 해당 grant 전체가 폐기된다
+- Google OAuth 클라이언트: GCP 프로젝트 `datapopcorn-account`(datapopcorn@gmail.com 소유, 프로덕션 게시, 범위 openid·email·profile). 리디렉션 URI `https://api.datapopcorn.ai/callback`
+- 비밀값: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (`npx wrangler secret put`). KV: `OAUTH_KV`
+- 사용자 목록: `npx wrangler kv key list --binding OAUTH_KV --remote --prefix dp-user:` (이메일·가입일·마지막 로그인). 차단은 해당 키의 `blocked`를 true로
+
 ## 데이터 분석 스킬 (v0.3.0, 2026-11-03)
 
 데이터팝콘 분석 4단계 스킬(공개 저장소 `team-datapopcorn/datapopcorn-analysis-plugin`)을 MCP로 제공한다.

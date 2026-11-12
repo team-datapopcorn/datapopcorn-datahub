@@ -3,6 +3,8 @@ main = "worker.js"
 compatibility_date = "2026-11-01"
 account_id = "6647a1f7aa58954faaffdf4e042f305a"
 workers_dev = false
+compatibility_flags = ["global_fetch_strictly_public"]
+
 
 rules = [
   { type = "Text", globs = ["**/*.html"], fallthrough = true }
@@ -11,3 +13,7 @@ rules = [
 routes = [
   { pattern = "api.datapopcorn.ai", custom_domain = true }
 ]
+
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "568d9802093e44b498cd7e06c30c8816"
