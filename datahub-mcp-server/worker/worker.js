@@ -1,6 +1,7 @@
 import LANDING_PAGE from "./landing.html";
 import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
 import { handleAuthRoutes } from "./auth.js";
+import { recordRpc, handleAdmin } from "./usage.js";
 import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
 
 const SERVER_NAME = "datahub-mcp-server";
@@ -427,6 +428,8 @@ const publicService = {
     const url = new URL(request.url);
     const auth = await handleAuthRoutes(request, env);
     if (auth) return auth;
+    const admin = await handleAdmin(request, env);
+    if (admin) return admin;
     if (url.pathname === "/" && request.method === "GET") {
       return new Response(LANDING_PAGE, { headers: { "content-type": "text/html; charset=utf-8" } });
     }
@@ -441,7 +444,23 @@ const ORIGIN = "https://api.datapopcorn.ai";
 
 export default new OAuthProvider({
   apiRoute: "/mcp",
-  apiHandler: mcpService,
+  apiHandler: {
+    // 호출 기록: JSON-RPC 메시지의 method와 도구 이름만 남긴다(인자 X). 기록 실패가 응답을 막지 않게 waitUntil.
+    async fetch(request, env, ctx) {
+      const t0 = Date.now();
+      let messages = [];
+      if (request.method === "POST") {
+        try {
+          const body = await request.clone().json();
+          messages = (Array.isArray(body) ? body : [body]).map((m) => ({ method: m?.method, tool: m?.method === "tools/call" ? m?.params?.name : null }));
+        } catch {}
+      }
+      const res = await mcpService.fetch(request, env);
+      const rec = recordRpc(env, { userId: ctx.props?.userId || ctx.auth?.userId, clientId: ctx.auth?.clientId, messages, ok: res.status < 400, ms: Date.now() - t0 }).catch((e) => console.error("usage log", e?.message));
+      ctx.waitUntil?.(rec);
+      return res;
+    },
+  },
   defaultHandler: publicService,
   authorizeEndpoint: "/authorize",
   tokenEndpoint: "/token",

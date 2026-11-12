@@ -6,6 +6,7 @@
 //   2) Google 로그인(OpenID Connect, PKCE). 처음 로그인하면 그게 곧 가입이다.
 //   3) completeAuthorization → 클라이언트가 /token에서 토큰을 받는다(토큰·코드는 KV에 해시로만 저장).
 // 비밀값: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (wrangler secret). 사용자 기록: OAUTH_KV "dp-user:<google sub>".
+import { recordLogin } from "./usage.js";
 import { AuthorizationError, CimdFetchError, authorizationErrorRedirect } from "@cloudflare/workers-oauth-provider";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -162,6 +163,7 @@ export async function handleAuthRoutes(request, env) {
       const info = await ui.json();
       if (!info.sub || !info.email || info.email_verified !== true) return errorPage("이메일 인증이 끝난 Google 계정만 쓸 수 있어요.", 403);
       const user = await upsertUser(env, info);
+      try { await recordLogin(env, { userId: `google_${info.sub}`, email: info.email, name: info.name || "" }); } catch (e) { console.error("login log", e?.message); }
       if (user.blocked) return errorPage("이 계정은 사용이 중지됐어요. contact@datapopcorn.ai로 문의해 주세요.", 403);
       const { redirectTo } = await oauth.completeAuthorization({
         request: original,

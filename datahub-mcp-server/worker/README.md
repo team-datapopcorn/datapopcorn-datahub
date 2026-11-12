@@ -18,6 +18,8 @@
 - 토큰: access 1시간, refresh 30일. 코드를 재사용하면 해당 grant 전체가 폐기된다
 - Google OAuth 클라이언트: GCP 프로젝트 `datapopcorn-account`(datapopcorn@gmail.com 소유, 프로덕션 게시, 범위 openid·email·profile). 리디렉션 URI `https://api.datapopcorn.ai/callback`
 - 비밀값: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (`npx wrangler secret put`). KV: `OAUTH_KV`
+- 사용 기록(v0.4.1): D1 `datapopcorn-mcp-usage`(`USAGE_DB`)의 `users`·`events`·`clients`. 로그인과 MCP 요청의 method·도구 이름·성공 여부·응답 시간만 남기고 도구 인자는 저장하지 않는다. 스키마는 `migrations/`(`npx wrangler d1 migrations apply datapopcorn-mcp-usage --remote`)
+- 관리자 통계: `GET /admin/stats` (`Authorization: Bearer <ADMIN_TOKEN>`). dashboard.datapopcorn.ai의 "MCP 사용자" 탭이 원격 맥 `data/mcp-admin-token`으로 중계한다(대표 계정만)
 - 사용자 목록: `npx wrangler kv key list --binding OAUTH_KV --remote --prefix dp-user:` (이메일·가입일·마지막 로그인). 차단은 해당 키의 `blocked`를 true로
 
 ## 데이터 분석 스킬 (v0.3.0, 2026-11-03)

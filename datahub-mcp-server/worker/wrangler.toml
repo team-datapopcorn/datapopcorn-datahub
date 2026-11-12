@@ -17,3 +17,9 @@ routes = [
 [[kv_namespaces]]
 binding = "OAUTH_KV"
 id = "568d9802093e44b498cd7e06c30c8816"
+
+[[d1_databases]]
+binding = "USAGE_DB"
+database_name = "datapopcorn-mcp-usage"
+database_id = "d5935553-709b-40c2-b2d2-0a93ae51917d"
+migrations_dir = "migrations"
