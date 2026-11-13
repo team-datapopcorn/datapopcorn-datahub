@@ -4,6 +4,8 @@ import { handleAuthRoutes } from "./auth.js";
 import { recordRpc, handleAdmin, purgeExpired } from "./usage.js";
 import { geo, appName, hostOf } from "./context.js";
 import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
+import { WEATHER_TOOLS, WEATHER_TOOL_NAMES, callWeatherTool } from "./weather.js";
+import { BIKE_TOOLS, BIKE_TOOL_NAMES, callBikeTool } from "./bike.js";
 
 const SERVER_NAME = "datahub-mcp-server";
 const SERVER_VERSION = "0.4.3";
@@ -34,7 +36,13 @@ const GUIDE_TEXT = `# datahub-mcp-server 사용 가이드
 - \`analysis_get_skill\` — 단계별 작업 지침. \`stage\`: pipeline / 1-hypothesis / 2-collect / 3-suspect / 4-report. 분석 시작 시 pipeline부터.
 - \`analysis_traps_checklist\` — 결론 전에 통과할 함정 10개(트렌드 분석이면 \`trend: true\`로 6개 추가) traps_check.md 양식.
 - \`analysis_suspect_numbers\` — 숫자 배열(+날짜·세그먼트 건수)을 넣으면 표본 크기, 평균 vs 중앙값, 이상치, 기간 공백, 기준 기간, 급변점을 계산해 traps_check.md 초안을 줌.
+- \`analysis_correlation\` — 두 숫자 배열(x, y)과 선택적 날짜를 받아 피어슨·스피어만 상관계수, 비선형성 의심, 요일(평일 vs 주말) 교란변수 분리를 계산.
 - 같은 지침을 MCP 프롬프트(\`analysis_pipeline\`, \`analysis_1_hypothesis\` ~ \`analysis_4_report\`)와 리소스(\`datapopcorn://skills/...\`)로도 제공.
+
+## 날씨 & 따릉이 (공공 데이터)
+
+- \`weather_get_daily\` — Open-Meteo 기반 한국 주요 도시 일별 기온·강수량·풍속 조회 (API 키 불필요).
+- \`bike_get_daily_usage\` — 서울시 따릉이 일별 대여·반납 이용 현황(\`tbCycleUseStatus\`) 조회 (\`SEOUL_OPEN_DATA_KEY\` 없으면 sample 키 동작).
 
 ## 사용 예시 (자연어로 그냥 물어보면 됨)
 
@@ -128,7 +136,7 @@ class JsonRpcError extends Error {
   }
 }
 
-const TOOL_DEFINITIONS = [...TOOL_DEFINITIONS_BASE, ...ANALYSIS_TOOLS];
+const TOOL_DEFINITIONS = [...TOOL_DEFINITIONS_BASE, ...ANALYSIS_TOOLS, ...WEATHER_TOOLS, ...BIKE_TOOLS];
 
 // /mcp 본체. OAuthProvider가 토큰을 확인한 요청만 여기로 온다(ctx.props에 로그인한 사용자).
 const mcpService = {
@@ -333,6 +341,20 @@ async function callTool(params, env) {
       return asText(callAnalysisTool(params.name, args));
     } catch (error) {
       return { content: [{ type: "text", text: `입력 오류: ${error.message}` }], isError: true };
+    }
+  }
+  if (WEATHER_TOOL_NAMES.has(params.name)) {
+    try {
+      return asText(await callWeatherTool(params.name, args));
+    } catch (error) {
+      return { content: [{ type: "text", text: `날씨 조회 오류: ${error.message}` }], isError: true };
+    }
+  }
+  if (BIKE_TOOL_NAMES.has(params.name)) {
+    try {
+      return asText(await callBikeTool(params.name, args, env));
+    } catch (error) {
+      return { content: [{ type: "text", text: `따릉이 조회 오류: ${error.message}` }], isError: true };
     }
   }
   switch (params.name) {

@@ -129,6 +129,23 @@ export const ANALYSIS_TOOLS = [
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
+  {
+    name: "analysis_correlation",
+    description:
+      "[분석] 두 숫자 배열(x, y)과 선택적 날짜(dates)를 받아 피어슨(선형)·스피어만(순위/비선형) 상관계수, 비선형성 의심 여부, 요일(평일 vs 주말) 교란변수 분리 결과 및 함정 체크를 반환합니다. 예: '기온 배열과 따릉이 이용량 배열의 상관관계 체크해줘'",
+    inputSchema: {
+      type: "object",
+      properties: {
+        x_name: { type: "string", description: "X 지표 이름 (예: 평균기온)" },
+        y_name: { type: "string", description: "Y 지표 이름 (예: 따릉이 대여건수)" },
+        x: { type: "array", items: { type: "number" }, minItems: 3, description: "X 값 배열" },
+        y: { type: "array", items: { type: "number" }, minItems: 3, description: "Y 값 배열 (x와 같은 길이)" },
+        dates: { type: "array", items: { type: "string" }, description: "선택. YYYY-MM-DD 형식 날짜 배열 (평일/주말 교란변수 점검용)" },
+      },
+      required: ["x", "y"],
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
 ];
 
 export const ANALYSIS_TOOL_NAMES = new Set(ANALYSIS_TOOLS.map((t) => t.name));
@@ -140,6 +157,7 @@ export function callAnalysisTool(name, args = {}) {
   }
   if (name === "analysis_traps_checklist") return trapsChecklist(Boolean(args.trend));
   if (name === "analysis_suspect_numbers") return suspectNumbers(args);
+  if (name === "analysis_correlation") return analyzeCorrelation(args);
   throw new Error(`Unknown analysis tool: ${name}`);
 }
 
@@ -303,4 +321,120 @@ function suspectNumbers(args) {
 ${rows.join("\n")}
 
 > 자동 판정은 계산으로 확인할 수 있는 항목(1, 3, 4, 5의 일부, 9)만 채운 **초안**입니다. "사람 판정 필요" 칸은 분석가가 직접 해당없음/확인함/걸림으로 바꿔야 traps_check.md가 완성됩니다. 이상치는 지우지 말고 판정하세요.`;
+}
+
+function pearsonR(xs, ys) {
+  const n = xs.length;
+  if (n < 3) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let dx = 0;
+  let dy = 0;
+  for (let i = 0; i < n; i++) {
+    const vx = xs[i] - mx;
+    const vy = ys[i] - my;
+    num += vx * vy;
+    dx += vx * vx;
+    dy += vy * vy;
+  }
+  const den = Math.sqrt(dx * dy);
+  return den === 0 ? null : num / den;
+}
+
+function averageRanks(arr) {
+  const indexed = arr.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
+  const ranks = new Array(arr.length);
+  let i = 0;
+  while (i < indexed.length) {
+    let j = i;
+    while (j + 1 < indexed.length && indexed[j + 1].v === indexed[i].v) j++;
+    const avgRank = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) ranks[indexed[k].i] = avgRank;
+    i = j + 1;
+  }
+  return ranks;
+}
+
+function corrStrength(r) {
+  if (r === null) return "계산 불가(분산 0 또는 표본 부족)";
+  const a = Math.abs(r);
+  const dir = r >= 0 ? "양(+)" : "음(-)";
+  if (a >= 0.7) return `강한 ${dir}의 상관`;
+  if (a >= 0.4) return `뚜렷한 ${dir}의 상관`;
+  if (a >= 0.2) return `약한 ${dir}의 상관`;
+  return "거의 무관";
+}
+
+function analyzeCorrelation(args) {
+  const xName = args.x_name || "X";
+  const yName = args.y_name || "Y";
+  const x = (args.x || []).map(Number);
+  const y = (args.y || []).map(Number);
+  if (x.length < 3 || y.length < 3 || x.length !== y.length || x.some(Number.isNaN) || y.some(Number.isNaN)) {
+    throw new Error("x와 y는 같은 길이(최소 3개)의 숫자 배열이어야 합니다.");
+  }
+
+  const dates = Array.isArray(args.dates) && args.dates.length === x.length ? args.dates : null;
+  const n = x.length;
+  const r = pearsonR(x, y);
+  const rho = pearsonR(averageRanks(x), averageRanks(y));
+  const r2 = r === null ? null : r * r;
+
+  const warnings = [];
+  if (n < 10) {
+    warnings.push(`표본 크기(n=${n})가 작아 우연에 의한 상관일 수 있습니다.`);
+  }
+  if (r !== null && rho !== null && (Math.abs(rho - r) >= 0.15 || (r * rho < 0 && Math.abs(rho - r) >= 0.1))) {
+    warnings.push(
+      `피어슨(r=${round(r, 3)})과 스피어만(ρ=${round(rho, 3)}) 차이가 큽니다 → 비선형 관계(예: 임계점 이후 꺾임) 또는 극단 이상치 영향 의심.`
+    );
+  }
+
+  let splitSection = "";
+  if (dates && dates.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d)))) {
+    const wdX = [];
+    const wdY = [];
+    const weX = [];
+    const weY = [];
+    for (let i = 0; i < n; i++) {
+      const day = new Date(`${dates[i]}T00:00:00Z`).getUTCDay();
+      if (day === 0 || day === 6) {
+        weX.push(x[i]);
+        weY.push(y[i]);
+      } else {
+        wdX.push(x[i]);
+        wdY.push(y[i]);
+      }
+    }
+    const rWd = pearsonR(wdX, wdY);
+    const rWe = pearsonR(weX, weY);
+    splitSection = `
+## 요일 교란변수 분리 (평일 vs 주말)
+
+| 구분 | 개수(n) | 피어슨 r | 해석 |
+|---|---|---|---|
+| 평일 (월~금) | ${wdX.length} | ${rWd === null ? "N/A" : round(rWd, 3)} | ${corrStrength(rWd)} |
+| 주말 (토·일) | ${weX.length} | ${rWe === null ? "N/A" : round(rWe, 3)} | ${corrStrength(rWe)} |
+`;
+    if (rWd !== null && rWe !== null && (Math.abs(rWd - rWe) >= 0.25 || rWd * rWe < 0)) {
+      warnings.push(
+        `평일(r=${round(rWd, 3)})과 주말(r=${round(rWe, 3)})의 상관계수 차이가 큽니다 → 요일이 교란변수일 수 있으므로 분리 해석이 필요합니다.`
+      );
+    }
+  }
+
+  return `# ${xName} × ${yName} 상관관계 점검
+
+| 지표 | 값 | 해석 |
+|---|---|---|
+| 표본 크기 (n) | ${n} | ${n < 10 ? "부족 (n<10)" : "기본 충족"} |
+| 피어슨 상관계수 (r) | ${r === null ? "N/A" : round(r, 3)} | ${corrStrength(r)} |
+| 결정계수 (R²) | ${r2 === null ? "N/A" : `${round(r2 * 100, 1)}%`} | 선형 설명력 |
+| 스피어만 상관계수 (ρ) | ${rho === null ? "N/A" : round(rho, 3)} | ${corrStrength(rho)} |
+${splitSection}
+## 함정 자동 점검
+
+${warnings.length ? warnings.map((w) => `- ⚠️ **걸림**: ${w}`).join("\n") : "- ✅ 자동 계산 항목(표본 크기·비선형성·요일 교란)에서 특이 경고 없음"}
+- ⚠️ **상관 ≠ 인과**: 상관계수만으로 인과를 단정하지 마세요. 제3의 변수(계절, 요일, 공휴일, 이벤트)를 함께 확인하세요.`;
 }
