@@ -4,7 +4,7 @@
 도메인이 Dev@datapopcorn.ai 계정으로 옮겨진 뒤 Error 1000으로 멈췄고, 터널 호스트에도 접속할 수 없어서 Worker로 옮겼다.
 
 - 계정: Dev@datapopcorn.ai's Account, Worker 이름 `datapopcorn-datahub-mcp`, 커스텀 도메인 `api.datapopcorn.ai`
-- 도구: v0.5.2 기준 109개(14개 분류). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
+- 도구: v0.5.3 기준 107개(14개 분류). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
 - 비밀값: `NEIS_API_KEY` (`npx wrangler secret put NEIS_API_KEY`). NEIS의 `sample` 키는 2026-11-03 기준 ERROR-290으로 거절됨
 - 배포: 이 폴더에서 `npx wrangler deploy`. `landing.html`은 `../public/index.html` 복사본이다
 
@@ -54,7 +54,7 @@
 | 학교·급식 `neis_` | `worker.js`, `neis2.js` | 3+7 | NEIS (`NEIS_API_KEY`) |
 | 날씨·대기질 `weather_` | `weather.js`, `weather2.js` | 1+7 | Open-Meteo(키 없음, 대기질은 CAMS 모델 추정) |
 | 달력·공휴일 `cal_` | `calendar.js` | 5 | Nager.Date |
-| 환율·코인 `fx_` `crypto_` | `econ.js` | 5 | Frankfurter(ECB 기준율), 업비트 공개 API |
+| 환율 `fx_` | `econ.js` | 3 | Frankfurter(ECB 기준율) |
 | 국가 비교 `wb_` | `econ.js` | 2 | World Bank |
 | 실습 데이터셋 `uci_` | `uci.js` | 4 | UCI ML Repository(CC BY 4.0, 하루 캐시) |
 | 관심도·논문 `wiki_` `paper_` | `research.js` | 4 | Wikimedia, OpenAlex → 429면 Crossref로 자동 전환 |
@@ -65,4 +65,5 @@
 - 테스트: `tests/*.test.mjs` (모듈별, 실제 API 호출 포함). `for t in tests/*.test.mjs; do node $t; done`
 - 운영 검증(2026-11-17): 실제 OAuth 로그인(dev@datapopcorn.ai) 토큰으로 `/mcp`의 109개 도구를 모두 호출해 109/109 성공
 - 배포 메모: Aside 샌드박스에서는 esbuild 네이티브 바이너리가 실행되지 않아 `esbuild-wasm`으로 번들한 뒤 `wrangler deploy --no-bundle`로 올렸다. 일반 터미널에서는 그대로 `npx wrangler deploy`
-- 알려진 한계: OpenAlex 무키 한도는 Cloudflare 공용 IP에서 금방 차서 Crossref 대체가 자주 쓰일 수 있음(`OPENALEX_API_KEY` 비밀값을 넣으면 OpenAlex 우선). 업비트 공개 API의 상업적 재배포 약관은 별도 확인 필요
+- 알려진 한계: OpenAlex 무키 한도는 Cloudflare 공용 IP에서 금방 차서 Crossref 대체가 자주 쓰일 수 있음(`OPENALEX_API_KEY` 비밀값을 넣으면 OpenAlex 우선). 업비트 시세 도구 2개(crypto_)는 v0.5.3에서 뺐다: 업비트 Open API 약관 제5조가 영리목적 이용·재배포를 금지
+- Open-Meteo 무료 API는 비상업 전용(open-meteo.com/en/terms). 유료화하면 API 구독 또는 기상청·에어코리아 공공데이터로 교체 필요

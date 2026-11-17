@@ -20,7 +20,7 @@ import { RESEARCH_TOOLS, RESEARCH_TOOL_NAMES, callResearchTool } from "./researc
 import { SUNEUNG_TOOLS, SUNEUNG_TOOL_NAMES, callSuneungTool } from "./suneung.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.5.2";
+const SERVER_VERSION = "0.5.3";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "데이터팝콘 데이터 MCP. 한국 공공데이터 조회(NEIS·날씨·환율 등), 통계 검정·예측(stats_), 비즈니스 지표(biz_), " +
@@ -54,7 +54,7 @@ const GUIDE_TAIL = `
 ## 참고
 
 - 데이터팝콘 계정(Google 로그인)으로 가입·로그인한 사용자만 호출할 수 있음. 모든 도구는 읽기 전용.
-- 외부 원천(NEIS, Open-Meteo, Frankfurter(ECB), 업비트, World Bank, UCI, Wikimedia, OpenAlex, Nager.Date)의 값은 각 원천 기준이며, 결과의 source·출처 표기를 함께 전달할 것.
+- 외부 원천(NEIS, Open-Meteo, Frankfurter(ECB), World Bank, UCI, Wikimedia, OpenAlex, Nager.Date)의 값은 각 원천 기준이며, 결과의 source·출처 표기를 함께 전달할 것.
 `;
 const JSON_RPC_VERSION = "2.0";
 const LATEST_PROTOCOL_VERSION = "2025-11-25";
@@ -176,7 +176,7 @@ const TOOL_GROUPS = [
   { match: (n) => n.startsWith("neis_"), title: "학교 · 급식 (NEIS)", summary: "학교 검색, 급식·영양·알레르기 확인, 학사일정, 시간표, 학급·학과 정보, 학원·교습소 검색" },
   { match: (n) => n.startsWith("weather_"), title: "날씨 · 대기질", summary: "일별 관측·16일 예보, 미세먼지 등급, 도시 비교, 월별 기후 평년, 일출·일몰, 해상 파고" },
   { match: (n) => n.startsWith("cal_"), title: "달력 · 공휴일", summary: "공휴일 조회, 영업일 수 계산, N영업일 뒤 날짜, 날짜 정보·차이" },
-  { match: (n) => n.startsWith("fx_") || n.startsWith("crypto_"), title: "환율 · 코인 시세", summary: "ECB 기준 환율 조회·추이·환산, 업비트 시세·캔들" },
+  { match: (n) => n.startsWith("fx_"), title: "환율", summary: "ECB 기준 환율 조회·추이·환산" },
   { match: (n) => n.startsWith("wb_"), title: "국가 비교 (World Bank)", summary: "GDP·인구·물가·실업률 등 국가 지표 조회, 국가 간 순위 비교" },
   { match: (n) => n.startsWith("uci_"), title: "실습 데이터셋 (UCI)", summary: "공개 데이터셋 검색, 메타데이터·변수 설명, 앞부분 미리보기, 강의용 추천 목록" },
   { match: (n) => n.startsWith("wiki_") || n.startsWith("paper_"), title: "관심도 · 논문 리서치", summary: "위키백과 조회수 추이(관심도 대리지표)·비교, 문서 요약, 논문 검색" },

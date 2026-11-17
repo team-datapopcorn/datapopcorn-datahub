@@ -27,7 +27,7 @@ export const TOOL_TITLES = {
   weather_get_daily: "일별 날씨 관측", weather_get_forecast: "날씨 예보", weather_get_air_quality: "미세먼지 예보", weather_geocode: "지명 좌표 찾기",
   weather_compare_cities: "도시별 날씨 비교", weather_monthly_climate: "월별 기후 평년", weather_get_sun_times: "일출·일몰 시각", weather_marine: "해상 파고",
   cal_holidays: "공휴일 조회", cal_business_days: "영업일 수 계산", cal_add_business_days: "N영업일 뒤 날짜", cal_date_info: "날짜 정보", cal_date_diff: "날짜 차이",
-  fx_get_latest: "최신 환율", fx_get_history: "환율 추이", fx_convert: "환율 환산", crypto_get_ticker: "업비트 코인 시세", crypto_get_candles: "업비트 캔들 시세",
+  fx_get_latest: "최신 환율", fx_get_history: "환율 추이", fx_convert: "환율 환산",
   wb_get_indicator: "World Bank 국가 지표", wb_compare_countries: "국가 지표 순위 비교",
   uci_search_datasets: "UCI 데이터셋 검색", uci_get_dataset: "UCI 데이터셋 정보", uci_preview_data: "UCI 데이터 미리보기", uci_list_curated: "실습용 추천 데이터셋",
   wiki_get_pageviews: "위키백과 조회수 추이", wiki_compare_pageviews: "위키백과 조회수 비교", wiki_get_summary: "위키백과 문서 요약", paper_search_works: "논문 검색",

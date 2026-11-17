@@ -8,7 +8,6 @@ const FX_HOSTS = ["https://api.frankfurter.dev/v1", "https://api.frankfurter.app
 const FX_NOTE =
   "ECB(유럽중앙은행) 기준환율(매 영업일 1회, 중부유럽 16시 기준)이며 국내 은행 고시환율·매매기준율과 다를 수 있음. 주말·휴일은 값 없음.";
 const FX_ATTR = "환율 출처: Frankfurter API (European Central Bank reference rates)";
-const UPBIT_ATTR = "시세 출처: 업비트 Open API (api.upbit.com)";
 const WB_ATTR = "출처: World Bank, World Development Indicators (CC BY 4.0)";
 
 const WB_ALIASES = {
@@ -99,41 +98,6 @@ export const ECON_TOOLS = [
         date: { type: "string", description: "선택. 기준일 YYYY-MM-DD" },
       },
       required: ["amount", "from", "to"],
-    },
-    annotations: READ_ONLY,
-  },
-  {
-    name: "crypto_get_ticker",
-    description:
-      "[가상자산] 업비트 원화마켓 현재가, 전일 대비 등락률, 24시간 거래대금(원)을 조회합니다. 코인 심볼(BTC)이나 마켓 코드(KRW-BTC) 모두 됩니다. 예: '비트코인·이더리움 지금 얼마야?'",
-    inputSchema: {
-      type: "object",
-      properties: {
-        markets: {
-          type: "array",
-          items: { type: "string" },
-          description: "코인 심볼 또는 마켓 코드 목록 (기본: BTC, ETH, XRP). 최대 20개",
-        },
-      },
-    },
-    annotations: READ_ONLY,
-  },
-  {
-    name: "crypto_get_candles",
-    description:
-      "[가상자산] 업비트 캔들(일·주·월·분봉) OHLCV와 기간 수익률(%), 변동성(수익률 표준편차)을 줍니다. 예: '비트코인 최근 30일 일봉이랑 변동성 알려줘'",
-    inputSchema: {
-      type: "object",
-      properties: {
-        market: { type: "string", description: "코인 심볼 또는 마켓 코드 (기본 KRW-BTC)" },
-        interval: {
-          type: "string",
-          enum: ["days", "weeks", "months", "minutes"],
-          description: "캔들 단위 (기본 days)",
-        },
-        unit: { type: "integer", enum: [1, 3, 5, 10, 15, 30, 60, 240], description: "분봉일 때 분 단위 (기본 60)" },
-        count: { type: "integer", minimum: 1, maximum: 200, description: "캔들 개수 (기본 30, 최대 200)" },
-      },
     },
     annotations: READ_ONLY,
   },
@@ -332,88 +296,6 @@ async function fxConvert(args) {
   };
 }
 
-// ---------- Upbit ----------
-function toMarket(s) {
-  const v = String(s || "").trim().toUpperCase();
-  if (!v) throw new Error("마켓/코인 심볼이 비었습니다.");
-  if (/^(KRW|BTC|USDT)-[A-Z0-9]+$/.test(v)) return v;
-  if (/^[A-Z0-9]{1,15}$/.test(v)) return `KRW-${v}`;
-  throw new Error(`마켓 코드 형식이 올바르지 않습니다: '${s}' (예: BTC 또는 KRW-BTC)`);
-}
-
-async function cryptoTicker(args) {
-  const list = (Array.isArray(args.markets) && args.markets.length ? args.markets : ["BTC", "ETH", "XRP"]).slice(0, 20).map(toMarket);
-  const url = `https://api.upbit.com/v1/ticker?markets=${encodeURIComponent(list.join(","))}`;
-  const data = await getJson(url, "업비트 ticker");
-  return {
-    source: "upbit",
-    count: data.length,
-    rows: data.map((t) => ({
-      market: t.market,
-      price: t.trade_price,
-      change: t.change,
-      changeRatePct: round(t.signed_change_rate * 100, 2),
-      changePrice: t.signed_change_price,
-      high: t.high_price,
-      low: t.low_price,
-      tradeValue24hKRW: Math.round(t.acc_trade_price_24h),
-      volume24h: round(t.acc_trade_volume_24h, 4),
-      high52w: t.highest_52_week_price,
-      low52w: t.lowest_52_week_price,
-      timeKST: `${t.trade_date_kst} ${t.trade_time_kst}`,
-    })),
-    note: "등락률은 업비트 기준 전일 종가(KST 0시) 대비. 투자 조언이 아님.",
-    attribution: UPBIT_ATTR,
-  };
-}
-
-async function cryptoCandles(args) {
-  const market = toMarket(args.market || "KRW-BTC");
-  const interval = args.interval || "days";
-  if (!["days", "weeks", "months", "minutes"].includes(interval)) throw new Error("interval은 days|weeks|months|minutes 중 하나입니다.");
-  const count = Math.max(1, Math.min(Number(args.count) || 30, 200));
-  let path = interval;
-  if (interval === "minutes") {
-    const unit = Number(args.unit) || 60;
-    if (![1, 3, 5, 10, 15, 30, 60, 240].includes(unit)) throw new Error("unit은 1,3,5,10,15,30,60,240 중 하나입니다.");
-    path = `minutes/${unit}`;
-  }
-  const url = `https://api.upbit.com/v1/candles/${path}?market=${encodeURIComponent(market)}&count=${count}`;
-  const data = await getJson(url, "업비트 candles");
-  const rows = data
-    .map((c) => ({
-      timeKST: c.candle_date_time_kst,
-      open: c.opening_price,
-      high: c.high_price,
-      low: c.low_price,
-      close: c.trade_price,
-      volume: round(c.candle_acc_trade_volume, 4),
-      tradeValueKRW: Math.round(c.candle_acc_trade_price),
-    }))
-    .reverse(); // 오래된 → 최신
-  if (!rows.length) throw new Error("캔들 데이터가 없습니다.");
-  const rets = [];
-  for (let i = 1; i < rows.length; i++) rets.push((rows[i].close - rows[i - 1].close) / rows[i - 1].close);
-  const sd = stdev(rets);
-  return {
-    source: "upbit",
-    market,
-    interval: path,
-    count: rows.length,
-    summary: {
-      from: rows[0].timeKST,
-      to: rows[rows.length - 1].timeKST,
-      periodReturnPct: round(((rows[rows.length - 1].close - rows[0].open) / rows[0].open) * 100, 2),
-      volatilityPct: sd == null ? null : round(sd * 100, 3),
-      volatilityNote: "캔들 간 종가 수익률의 표준편차(%). 마지막 캔들은 진행 중일 수 있음.",
-      highest: Math.max(...rows.map((r) => r.high)),
-      lowest: Math.min(...rows.map((r) => r.low)),
-    },
-    rows,
-    attribution: UPBIT_ATTR,
-  };
-}
-
 // ---------- World Bank ----------
 function toIndicator(v) {
   const s = String(v || "").trim();
@@ -522,8 +404,6 @@ export async function callEconTool(name, args = {}, env = {}) {
     case "fx_get_latest": return fxLatest(args);
     case "fx_get_history": return fxHistory(args);
     case "fx_convert": return fxConvert(args);
-    case "crypto_get_ticker": return cryptoTicker(args);
-    case "crypto_get_candles": return cryptoCandles(args);
     case "wb_get_indicator": return wbIndicator(args);
     case "wb_compare_countries": return wbCompare(args);
     default: throw new Error(`알 수 없는 경제 도구: ${name}`);
