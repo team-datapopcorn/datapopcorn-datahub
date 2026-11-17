@@ -4,8 +4,8 @@
 도메인이 Dev@datapopcorn.ai 계정으로 옮겨진 뒤 Error 1000으로 멈췄고, 터널 호스트에도 접속할 수 없어서 Worker로 옮겼다.
 
 - 계정: Dev@datapopcorn.ai's Account, Worker 이름 `datapopcorn-datahub-mcp`, 커스텀 도메인 `api.datapopcorn.ai`
-- 도구: v0.5.3 기준 107개(14개 분류). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
-- 비밀값: `NEIS_API_KEY` (`npx wrangler secret put NEIS_API_KEY`). NEIS의 `sample` 키는 2026-11-03 기준 ERROR-290으로 거절됨
+- 도구: v0.6.0 기준 107개(14개 분류). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
+- 비밀값: `NEIS_API_KEY`, `DATAGOKR_KEY`(공공데이터포털 일반 인증키, 기상청·에어코리아), `SEOUL_OPEN_DATA_KEY`(서울 열린데이터, 따릉이) (`npx wrangler secret put <이름>`). NEIS의 `sample` 키는 2026-11-03 기준 ERROR-290으로 거절됨
 - 배포: 이 폴더에서 `npx wrangler deploy`. `landing.html`은 `../public/index.html` 복사본이다
 
 ## 인증 (v0.4.0, 2026-11-12)
@@ -52,7 +52,7 @@
 | 한국 실무 계산 `kr_` | `krutil.js` | 12 | 없음(세율은 일반 규칙, 결과에 한계 명시) |
 | 수능·학원 상담 `suneung_` | `suneung.js`, `suneung-data.js` | 9 | 2026학년도 스냅샷(다른 세션 작업) |
 | 학교·급식 `neis_` | `worker.js`, `neis2.js` | 3+7 | NEIS (`NEIS_API_KEY`) |
-| 날씨·대기질 `weather_` | `weather.js`, `weather2.js` | 1+7 | Open-Meteo(키 없음, 대기질은 CAMS 모델 추정) |
+| 날씨·대기질 `weather_` | `kma.js` | 8 | 기상청 단기예보·ASOS 일자료, 에어코리아 대기오염정보 (공공데이터포털 `DATAGOKR_KEY`), 일출·일몰은 NOAA 식으로 자체 계산 |
 | 달력·공휴일 `cal_` | `calendar.js` | 5 | Nager.Date |
 | 환율 `fx_` | `econ.js` | 3 | Frankfurter(ECB 기준율) |
 | 국가 비교 `wb_` | `econ.js` | 2 | World Bank |
@@ -66,4 +66,5 @@
 - 운영 검증(2026-11-17): 실제 OAuth 로그인(dev@datapopcorn.ai) 토큰으로 `/mcp`의 109개 도구를 모두 호출해 109/109 성공
 - 배포 메모: Aside 샌드박스에서는 esbuild 네이티브 바이너리가 실행되지 않아 `esbuild-wasm`으로 번들한 뒤 `wrangler deploy --no-bundle`로 올렸다. 일반 터미널에서는 그대로 `npx wrangler deploy`
 - 알려진 한계: OpenAlex 무키 한도는 Cloudflare 공용 IP에서 금방 차서 Crossref 대체가 자주 쓰일 수 있음(`OPENALEX_API_KEY` 비밀값을 넣으면 OpenAlex 우선). 업비트 시세 도구 2개(crypto_)는 v0.5.3에서 뺐다: 업비트 Open API 약관 제5조가 영리목적 이용·재배포를 금지
-- Open-Meteo 무료 API는 비상업 전용(open-meteo.com/en/terms). 유료화하면 API 구독 또는 기상청·에어코리아 공공데이터로 교체 필요
+- 날씨는 v0.6.0에서 Open-Meteo(무료 API는 비상업 전용)를 걷어내고 기상청·에어코리아(공공누리, 상업 이용 가능)로 교체. 지명 표는 시군구 약 300곳 좌표 + KMA LCC 격자 변환(일부 1칸 차이 가능), ASOS 91개 지점은 API로 이름 대조 완료
+- 공공데이터포털 개발계정 키는 API별 일 10,000회 한도이고 재난 한 장 잡과 같이 쓴다. 사용량이 늘면 운영계정 전환 신청 필요

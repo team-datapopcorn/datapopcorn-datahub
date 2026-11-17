@@ -5,14 +5,13 @@ import { handleAuthRoutes } from "./auth.js";
 import { recordRpc, handleAdmin, purgeExpired } from "./usage.js";
 import { geo, appName, hostOf } from "./context.js";
 import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
-import { WEATHER_TOOLS, WEATHER_TOOL_NAMES, callWeatherTool } from "./weather.js";
 import { BIKE_TOOLS, BIKE_TOOL_NAMES, callBikeTool } from "./bike.js";
 import { STATS_TOOLS, STATS_TOOL_NAMES, callStatsTool } from "./stats.js";
 import { DATA_TOOLS, DATA_TOOL_NAMES, callDataTool } from "./datatools.js";
 import { BIZ_TOOLS, BIZ_TOOL_NAMES, callBizTool } from "./biz.js";
 import { KR_TOOLS, KR_TOOL_NAMES, callKrTool } from "./krutil.js";
 import { NEIS2_TOOLS, NEIS2_TOOL_NAMES, callNeis2Tool } from "./neis2.js";
-import { WEATHER2_TOOLS, WEATHER2_TOOL_NAMES, callWeather2Tool } from "./weather2.js";
+import { KMA_TOOLS, KMA_TOOL_NAMES, callKmaTool } from "./kma.js";
 import { CAL_TOOLS, CAL_TOOL_NAMES, callCalTool } from "./calendar.js";
 import { ECON_TOOLS, ECON_TOOL_NAMES, callEconTool } from "./econ.js";
 import { UCI_TOOLS, UCI_TOOL_NAMES, callUciTool } from "./uci.js";
@@ -20,7 +19,7 @@ import { RESEARCH_TOOLS, RESEARCH_TOOL_NAMES, callResearchTool } from "./researc
 import { SUNEUNG_TOOLS, SUNEUNG_TOOL_NAMES, callSuneungTool } from "./suneung.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.5.3";
+const SERVER_VERSION = "0.6.0";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "데이터팝콘 데이터 MCP. 한국 공공데이터 조회(NEIS·날씨·환율 등), 통계 검정·예측(stats_), 비즈니스 지표(biz_), " +
@@ -54,7 +53,7 @@ const GUIDE_TAIL = `
 ## 참고
 
 - 데이터팝콘 계정(Google 로그인)으로 가입·로그인한 사용자만 호출할 수 있음. 모든 도구는 읽기 전용.
-- 외부 원천(NEIS, Open-Meteo, Frankfurter(ECB), World Bank, UCI, Wikimedia, OpenAlex, Nager.Date)의 값은 각 원천 기준이며, 결과의 source·출처 표기를 함께 전달할 것.
+- 외부 원천(NEIS, 기상청·에어코리아(공공데이터포털), Frankfurter(ECB), World Bank, UCI, Wikimedia, OpenAlex, Nager.Date)의 값은 각 원천 기준이며, 결과의 source·출처 표기를 함께 전달할 것.
 `;
 const JSON_RPC_VERSION = "2.0";
 const LATEST_PROTOCOL_VERSION = "2025-11-25";
@@ -142,7 +141,7 @@ const EXTRA_MODULES = [
   { names: BIZ_TOOL_NAMES, call: callBizTool, label: "비즈니스 지표 계산" },
   { names: KR_TOOL_NAMES, call: callKrTool, label: "한국 실무 계산" },
   { names: NEIS2_TOOL_NAMES, call: callNeis2Tool, label: "NEIS 조회" },
-  { names: WEATHER2_TOOL_NAMES, call: callWeather2Tool, label: "날씨 조회" },
+  { names: KMA_TOOL_NAMES, call: callKmaTool, label: "날씨 조회" },
   { names: CAL_TOOL_NAMES, call: callCalTool, label: "달력 계산" },
   { names: ECON_TOOL_NAMES, call: callEconTool, label: "경제 데이터 조회" },
   { names: UCI_TOOL_NAMES, call: callUciTool, label: "UCI 데이터셋 조회" },
@@ -151,7 +150,7 @@ const EXTRA_MODULES = [
 ];
 
 const TOOL_DEFINITIONS = [
-  ...TOOL_DEFINITIONS_BASE, ...NEIS2_TOOLS, ...WEATHER_TOOLS, ...WEATHER2_TOOLS, ...BIKE_TOOLS, ...CAL_TOOLS,
+  ...TOOL_DEFINITIONS_BASE, ...NEIS2_TOOLS, ...KMA_TOOLS, ...BIKE_TOOLS, ...CAL_TOOLS,
   ...ANALYSIS_TOOLS, ...STATS_TOOLS, ...DATA_TOOLS, ...BIZ_TOOLS, ...KR_TOOLS,
   ...ECON_TOOLS, ...UCI_TOOLS, ...RESEARCH_TOOLS, ...SUNEUNG_TOOLS,
 ];
@@ -174,7 +173,7 @@ const TOOL_GROUPS = [
   { match: (n) => n.startsWith("kr_"), title: "한국 실무 계산", summary: "사업자번호 검증, 부가세·3.3% 원천징수, 금액 한글 표기, 대출 상환표·예적금 이자, 평 환산, 만 나이" },
   { match: (n) => n.startsWith("analysis_"), title: "데이터 분석 스킬", summary: "4단계 분석 지침(가설→수집→의심→정리), 함정 체크리스트, 숫자 이상치·급변점 점검, 상관관계" },
   { match: (n) => n.startsWith("neis_"), title: "학교 · 급식 (NEIS)", summary: "학교 검색, 급식·영양·알레르기 확인, 학사일정, 시간표, 학급·학과 정보, 학원·교습소 검색" },
-  { match: (n) => n.startsWith("weather_"), title: "날씨 · 대기질", summary: "일별 관측·16일 예보, 미세먼지 등급, 도시 비교, 월별 기후 평년, 일출·일몰, 해상 파고" },
+  { match: (n) => n.startsWith("weather_"), title: "날씨 · 대기질", summary: "기상청 관측·단기예보, 에어코리아 미세먼지, 지명→예보격자, 도시 비교, 월별 기후, 일출·일몰, 해상 파고" },
   { match: (n) => n.startsWith("cal_"), title: "달력 · 공휴일", summary: "공휴일 조회, 영업일 수 계산, N영업일 뒤 날짜, 날짜 정보·차이" },
   { match: (n) => n.startsWith("fx_"), title: "환율", summary: "ECB 기준 환율 조회·추이·환산" },
   { match: (n) => n.startsWith("wb_"), title: "국가 비교 (World Bank)", summary: "GDP·인구·물가·실업률 등 국가 지표 조회, 국가 간 순위 비교" },
@@ -417,13 +416,6 @@ async function callTool(params, env) {
       return asText(callAnalysisTool(params.name, args));
     } catch (error) {
       return { content: [{ type: "text", text: `입력 오류: ${error.message}` }], isError: true };
-    }
-  }
-  if (WEATHER_TOOL_NAMES.has(params.name)) {
-    try {
-      return asText(await callWeatherTool(params.name, args));
-    } catch (error) {
-      return { content: [{ type: "text", text: `날씨 조회 오류: ${error.message}` }], isError: true };
     }
   }
   if (BIKE_TOOL_NAMES.has(params.name)) {
