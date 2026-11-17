@@ -4,7 +4,7 @@
 도메인이 Dev@datapopcorn.ai 계정으로 옮겨진 뒤 Error 1000으로 멈췄고, 터널 호스트에도 접속할 수 없어서 Worker로 옮겼다.
 
 - 계정: Dev@datapopcorn.ai's Account, Worker 이름 `datapopcorn-datahub-mcp`, 커스텀 도메인 `api.datapopcorn.ai`
-- 도구: guide, neis_list_office_codes, neis_search_schools, neis_get_meals (Node 버전과 같은 이름·인자)
+- 도구: v0.5.2 기준 109개(14개 분류). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
 - 비밀값: `NEIS_API_KEY` (`npx wrangler secret put NEIS_API_KEY`). NEIS의 `sample` 키는 2026-11-03 기준 ERROR-290으로 거절됨
 - 배포: 이 폴더에서 `npx wrangler deploy`. `landing.html`은 `../public/index.html` 복사본이다
 
@@ -38,3 +38,31 @@
 
 스킬이 바뀌면: `node scripts/sync-skills.mjs` (GitHub main에서 받음, `--local <폴더>`로 로컬도 가능) → `npx wrangler deploy`.
 `skills-bundle.js`는 생성 파일이라 직접 고치지 않는다.
+
+## 도구 100개 확장 (v0.5.0~0.5.2, 2026-11-17)
+
+10개였던 도구를 사업화 목적으로 100개로 늘렸다(이후 수능 9개가 더해져 109개). 방향은 2026-11-03 사업화 검토 결론을 따른다:
+공공데이터를 감싸기만 한 MCP는 무료화되는 중이라, **분석·비즈니스 계산 도구와 검증된 한국 데이터**에 무게를 뒀다.
+
+| 분류(접두어) | 파일 | 개수 | 외부 원천 |
+|---|---|---|---|
+| 비즈니스 지표 `biz_` | `biz.js` | 16 | 없음(계산) |
+| 통계 검정·예측 `stats_` | `stats.js` | 18 | 없음(계산, R 결과와 대조) |
+| 데이터 정리 `data_` | `datatools.js` | 10 | 없음(CSV 최대 5,000행) |
+| 한국 실무 계산 `kr_` | `krutil.js` | 12 | 없음(세율은 일반 규칙, 결과에 한계 명시) |
+| 수능·학원 상담 `suneung_` | `suneung.js`, `suneung-data.js` | 9 | 2026학년도 스냅샷(다른 세션 작업) |
+| 학교·급식 `neis_` | `worker.js`, `neis2.js` | 3+7 | NEIS (`NEIS_API_KEY`) |
+| 날씨·대기질 `weather_` | `weather.js`, `weather2.js` | 1+7 | Open-Meteo(키 없음, 대기질은 CAMS 모델 추정) |
+| 달력·공휴일 `cal_` | `calendar.js` | 5 | Nager.Date |
+| 환율·코인 `fx_` `crypto_` | `econ.js` | 5 | Frankfurter(ECB 기준율), 업비트 공개 API |
+| 국가 비교 `wb_` | `econ.js` | 2 | World Bank |
+| 실습 데이터셋 `uci_` | `uci.js` | 4 | UCI ML Repository(CC BY 4.0, 하루 캐시) |
+| 관심도·논문 `wiki_` `paper_` | `research.js` | 4 | Wikimedia, OpenAlex → 429면 Crossref로 자동 전환 |
+| 분석 스킬 `analysis_`, 따릉이 `bike_`, `guide` | 기존 | 4+1+1 | |
+
+- 모든 도구에 `title`(`titles.js`)과 `readOnlyHint: true`를 붙인다(Claude 커넥터 디렉터리 요건). 새 도구는 `titles.js`에 한 줄, 새 분류는 `worker.js`의 `TOOL_GROUPS`에 한 줄 추가
+- 디스패치: `worker.js`의 `EXTRA_MODULES`(이름 집합 → call 함수). 오류는 `isError: true`와 한국어 메시지
+- 테스트: `tests/*.test.mjs` (모듈별, 실제 API 호출 포함). `for t in tests/*.test.mjs; do node $t; done`
+- 운영 검증(2026-11-17): 실제 OAuth 로그인(dev@datapopcorn.ai) 토큰으로 `/mcp`의 109개 도구를 모두 호출해 109/109 성공
+- 배포 메모: Aside 샌드박스에서는 esbuild 네이티브 바이너리가 실행되지 않아 `esbuild-wasm`으로 번들한 뒤 `wrangler deploy --no-bundle`로 올렸다. 일반 터미널에서는 그대로 `npx wrangler deploy`
+- 알려진 한계: OpenAlex 무키 한도는 Cloudflare 공용 IP에서 금방 차서 Crossref 대체가 자주 쓰일 수 있음(`OPENALEX_API_KEY` 비밀값을 넣으면 OpenAlex 우선). 업비트 공개 API의 상업적 재배포 약관은 별도 확인 필요

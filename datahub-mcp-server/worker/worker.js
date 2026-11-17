@@ -1,4 +1,5 @@
 import LANDING_PAGE from "./landing.html";
+import { TOOL_TITLES } from "./titles.js";
 import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
 import { handleAuthRoutes } from "./auth.js";
 import { recordRpc, handleAdmin, purgeExpired } from "./usage.js";
@@ -6,56 +7,54 @@ import { geo, appName, hostOf } from "./context.js";
 import { ANALYSIS_TOOLS, ANALYSIS_TOOL_NAMES, callAnalysisTool, listPrompts, getPrompt, listResources, readResource } from "./analysis.js";
 import { WEATHER_TOOLS, WEATHER_TOOL_NAMES, callWeatherTool } from "./weather.js";
 import { BIKE_TOOLS, BIKE_TOOL_NAMES, callBikeTool } from "./bike.js";
+import { STATS_TOOLS, STATS_TOOL_NAMES, callStatsTool } from "./stats.js";
+import { DATA_TOOLS, DATA_TOOL_NAMES, callDataTool } from "./datatools.js";
+import { BIZ_TOOLS, BIZ_TOOL_NAMES, callBizTool } from "./biz.js";
+import { KR_TOOLS, KR_TOOL_NAMES, callKrTool } from "./krutil.js";
+import { NEIS2_TOOLS, NEIS2_TOOL_NAMES, callNeis2Tool } from "./neis2.js";
+import { WEATHER2_TOOLS, WEATHER2_TOOL_NAMES, callWeather2Tool } from "./weather2.js";
+import { CAL_TOOLS, CAL_TOOL_NAMES, callCalTool } from "./calendar.js";
+import { ECON_TOOLS, ECON_TOOL_NAMES, callEconTool } from "./econ.js";
+import { UCI_TOOLS, UCI_TOOL_NAMES, callUciTool } from "./uci.js";
+import { RESEARCH_TOOLS, RESEARCH_TOOL_NAMES, callResearchTool } from "./research.js";
+import { SUNEUNG_TOOLS, SUNEUNG_TOOL_NAMES, callSuneungTool } from "./suneung.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.4.3";
+const SERVER_VERSION = "0.5.2";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
-  "개인 데이터허브(datapopcorn)를 노출하는 MCP 서버. 처음 사용하거나 어떤 툴을 써야 할지 모르면 " +
-  "먼저 `guide` 툴을 호출해서 사용법과 현재 등록된 데이터 소스 목록을 확인할 것.";
-const GUIDE_TEXT = `# datahub-mcp-server 사용 가이드
+  "데이터팝콘 데이터 MCP. 한국 공공데이터 조회(NEIS·날씨·환율 등), 통계 검정·예측(stats_), 비즈니스 지표(biz_), " +
+  "CSV 정리(data_), 한국 실무 계산(kr_), 수능·학원 상담(suneung_) 도구가 있다. 분류별 목록과 예시는 `guide` 도구에 있다. " +
+  "계산 도구는 입력으로 받은 숫자만 계산하며, 결과에 해석과 출처(source)가 함께 들어 있다.";
+const GUIDE_HEAD = `# 데이터팝콘 데이터 MCP 사용 가이드
 
-이 서버는 개인 데이터허브(datapopcorn)를 MCP 도구로 노출하는 서버. 데이터 소스별로 툴이 묶여 있고,
-새 소스가 생기면 여기 계속 추가됨. 처음이면 이 가이드부터 읽고 시작할 것.
+한국 공공데이터 조회, 데이터 분석(통계·예측), 비즈니스 지표 계산, 한국 실무 계산을 한 서버에서 쓰는 MCP.
+도구 이름 앞의 접두어가 분류다(예: \`stats_\` 통계, \`biz_\` 비즈니스 지표, \`kr_\` 한국 실무 계산).
+모든 도구는 읽기 전용이며, 입력한 숫자·CSV는 계산에만 쓰고 저장하지 않는다.
 
-## 지금 쓸 수 있는 소스: NEIS (학교/급식, 공개 데이터) — 툴 이름 전부 \`neis_\` 접두어
+## 추천 흐름
 
-- \`neis_list_office_codes\` — 지역명(서울/부산/제주 등) -> 시도교육청 코드 매핑. 다른 툴 쓰기 전에 코드 모르면 먼저 호출.
-- \`neis_search_schools\` — 학교 검색. \`officeCode\`(필수, 예: B10) + \`schoolName\`(선택, 부분 일치)으로 학교코드(SD_SCHUL_CODE) 찾기.
-- \`neis_get_meals\` — 급식 정보 조회. \`officeCode\` + \`schoolCode\`(neis_search_schools로 찾은 값) + 날짜 조건(\`date\` 또는 \`fromDate\`/\`toDate\`)으로 조회, 여러 페이지 자동 처리.
-
-일반적인 흐름: neis_list_office_codes로 지역 코드 확인 → neis_search_schools로 학교코드 확인 → neis_get_meals로 급식 조회.
-학교코드를 이미 알고 있으면 앞 단계 생략 가능.
-
-새 소스가 추가되면 그 소스도 자기 접두어(예: \`haerapy_\`, \`golf_\`)를 씀 — 이름이 겹치거나 헷갈릴 일 없게 하기 위함.
-
-## 데이터 분석 스킬 (데이터팝콘 분석 4단계) — 툴 이름 전부 \`analysis_\` 접두어
-
-① 가설 → ② 수집 → ③ 의심 → ④ 정리 순서로 분석을 진행하게 돕는 지침과 점검 도구.
-
-- \`analysis_get_skill\` — 단계별 작업 지침. \`stage\`: pipeline / 1-hypothesis / 2-collect / 3-suspect / 4-report. 분석 시작 시 pipeline부터.
-- \`analysis_traps_checklist\` — 결론 전에 통과할 함정 10개(트렌드 분석이면 \`trend: true\`로 6개 추가) traps_check.md 양식.
-- \`analysis_suspect_numbers\` — 숫자 배열(+날짜·세그먼트 건수)을 넣으면 표본 크기, 평균 vs 중앙값, 이상치, 기간 공백, 기준 기간, 급변점을 계산해 traps_check.md 초안을 줌.
-- \`analysis_correlation\` — 두 숫자 배열(x, y)과 선택적 날짜를 받아 피어슨·스피어만 상관계수, 비선형성 의심, 요일(평일 vs 주말) 교란변수 분리를 계산.
-- 같은 지침을 MCP 프롬프트(\`analysis_pipeline\`, \`analysis_1_hypothesis\` ~ \`analysis_4_report\`)와 리소스(\`datapopcorn://skills/...\`)로도 제공.
-
-## 날씨 & 따릉이 (공공 데이터)
-
-- \`weather_get_daily\` — Open-Meteo 기반 한국 주요 도시 일별 기온·강수량·풍속 조회 (API 키 불필요).
-- \`bike_get_daily_usage\` — 서울시 따릉이 일별 대여·반납 이용 현황(\`tbCycleUseStatus\`) 조회 (\`SEOUL_OPEN_DATA_KEY\` 없으면 sample 키 동작).
-
+1. 질문이 막연하면 \`analysis_get_skill\`(stage=pipeline)로 데이터팝콘 분석 4단계(가설 → 수집 → 의심 → 정리)부터.
+2. 데이터는 조회 도구(neis_, weather_, fx_, wb_, uci_, wiki_, suneung_)로 가져오거나, 사용자가 붙여 넣은 CSV를 \`data_\` 도구로 정리.
+3. 숫자는 \`stats_\`(검정·예측)·\`biz_\`(퍼널·코호트·RFM·LTV 등)로 계산하고, 결론 전에 \`analysis_traps_checklist\`로 함정 점검.
+`;
+const GUIDE_TAIL = `
 ## 사용 예시 (자연어로 그냥 물어보면 됨)
 
-- "서울 지역 학교 코드 알려줘"
-- "서울 B10, 가락고등학교 학교코드 찾아줘"
-- "서울 B10, 학교코드 7010057 학교 이번 달 급식 알려줘"
-- "우리 가게 월 매출이 왜 떨어지는지 분석하고 싶어. 데이터팝콘 4단계로 시작해줘"
-- "월별 방문자 [120, 118, 125, 240, 230]인데 4월 급증 믿어도 돼?"
+- "서울 B10 가락고등학교 이번 달 급식에서 우유·땅콩 들어간 메뉴 빼줘"
+- "A안 전환 120/2400, B안 150/2380인데 유의미해?"
+- "이 주문 CSV로 RFM 고객 세분화 해줘"
+- "월 MRR 표로 순매출유지율(NRR)이랑 퀵레이쇼 계산해줘"
+- "프리랜서 강사료 300만원 3.3% 떼면 실수령 얼마야?"
+- "국어 131, 수학 128, 영어 85, 사문 65, 생윤 66인 학생 상담 자료 만들어줘" (수능·학원)
+- "다음 주 영업일 기준 5일 뒤 날짜"
+- "원/달러 환율 최근 3개월 추이"
+- "'생성형 인공지능' 위키 관심도 최근 1년 추이"
 
 ## 참고
 
-- 데이터팝콘 계정(Google 로그인)으로 가입·로그인한 사용자만 호출할 수 있음. MCP 클라이언트에 주소만 넣으면
-  처음 연결할 때 로그인 창이 뜸. 모든 도구는 읽기 전용.
+- 데이터팝콘 계정(Google 로그인)으로 가입·로그인한 사용자만 호출할 수 있음. 모든 도구는 읽기 전용.
+- 외부 원천(NEIS, Open-Meteo, Frankfurter(ECB), 업비트, World Bank, UCI, Wikimedia, OpenAlex, Nager.Date)의 값은 각 원천 기준이며, 결과의 source·출처 표기를 함께 전달할 것.
 `;
 const JSON_RPC_VERSION = "2.0";
 const LATEST_PROTOCOL_VERSION = "2025-11-25";
@@ -85,7 +84,7 @@ const READ_ONLY = { readOnlyHint: true, openWorldHint: true };
 const TOOL_DEFINITIONS_BASE = [
   {
     name: "guide",
-    description: "이 MCP 서버를 처음 쓰는 경우 가장 먼저 호출할 것. 서버 목적, 현재 등록된 데이터 소스, 각 툴 사용법과 예시를 안내합니다.",
+    description: "이 서버의 사용법, 분류별 도구 목록, 추천 분석 흐름과 예시 질문을 안내하는 문서를 돌려줍니다.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -136,7 +135,76 @@ class JsonRpcError extends Error {
   }
 }
 
-const TOOL_DEFINITIONS = [...TOOL_DEFINITIONS_BASE, ...ANALYSIS_TOOLS, ...WEATHER_TOOLS, ...BIKE_TOOLS];
+// 추가 도구 모듈: 이름 집합으로 찾아 해당 모듈의 call 함수로 보낸다. label은 오류 메시지 앞머리.
+const EXTRA_MODULES = [
+  { names: STATS_TOOL_NAMES, call: callStatsTool, label: "통계 계산" },
+  { names: DATA_TOOL_NAMES, call: callDataTool, label: "데이터 정리" },
+  { names: BIZ_TOOL_NAMES, call: callBizTool, label: "비즈니스 지표 계산" },
+  { names: KR_TOOL_NAMES, call: callKrTool, label: "한국 실무 계산" },
+  { names: NEIS2_TOOL_NAMES, call: callNeis2Tool, label: "NEIS 조회" },
+  { names: WEATHER2_TOOL_NAMES, call: callWeather2Tool, label: "날씨 조회" },
+  { names: CAL_TOOL_NAMES, call: callCalTool, label: "달력 계산" },
+  { names: ECON_TOOL_NAMES, call: callEconTool, label: "경제 데이터 조회" },
+  { names: UCI_TOOL_NAMES, call: callUciTool, label: "UCI 데이터셋 조회" },
+  { names: RESEARCH_TOOL_NAMES, call: callResearchTool, label: "리서치 조회" },
+  { names: SUNEUNG_TOOL_NAMES, call: callSuneungTool, label: "수능 조회" },
+];
+
+const TOOL_DEFINITIONS = [
+  ...TOOL_DEFINITIONS_BASE, ...NEIS2_TOOLS, ...WEATHER_TOOLS, ...WEATHER2_TOOLS, ...BIKE_TOOLS, ...CAL_TOOLS,
+  ...ANALYSIS_TOOLS, ...STATS_TOOLS, ...DATA_TOOLS, ...BIZ_TOOLS, ...KR_TOOLS,
+  ...ECON_TOOLS, ...UCI_TOOLS, ...RESEARCH_TOOLS, ...SUNEUNG_TOOLS,
+];
+
+// 모든 도구에 title(최상위 + annotations.title)과 readOnlyHint를 붙인다. 이 서버의 도구는 전부 읽기 전용.
+for (const t of TOOL_DEFINITIONS) {
+  const title = TOOL_TITLES[t.name] || t.name;
+  t.title = title;
+  t.annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: true, ...(t.annotations || {}), title };
+}
+
+// 소개 페이지(/)의 "도구 범위" 목록용 분류. 접두어로 묶고, 안 맞는 새 도구는 "기타"로 자동 노출.
+// 새 소스를 붙이면 여기에 한 줄(제목·요약)만 추가하면 됨.
+const TOOL_GROUPS = [
+  { match: (n) => n === "guide", title: "시작 가이드", summary: "서버 사용법, 분류별 도구 목록, 추천 흐름과 예시 질문" },
+  { match: (n) => n.startsWith("suneung_"), title: "수능 · 학원 상담", summary: "학생·반 성적표 해석(상위 %·백분위·등급·경계 학생), 등급컷·9월 모평 비교, N수·선택과목 추이, 난이도 이력, 수능날 안내문" },
+  { match: (n) => n.startsWith("biz_"), title: "비즈니스 지표", summary: "퍼널·코호트 리텐션, RFM 세분화, LTV/CAC, 손익분기, 광고 ROAS, SaaS MRR, 가격탄력성" },
+  { match: (n) => n.startsWith("stats_"), title: "통계 검정 · 예측", summary: "기술통계, t검정·A/B 테스트·표본 크기, 카이제곱·분산분석, 회귀, 이동평균·성장률, 수요 예측" },
+  { match: (n) => n.startsWith("data_"), title: "데이터 정리 (CSV · 텍스트)", summary: "CSV 프로파일·품질 점검, 그룹 집계·피벗, 중복 제거·조인, 날짜 정규화, 단어 빈도·키워드" },
+  { match: (n) => n.startsWith("kr_"), title: "한국 실무 계산", summary: "사업자번호 검증, 부가세·3.3% 원천징수, 금액 한글 표기, 대출 상환표·예적금 이자, 평 환산, 만 나이" },
+  { match: (n) => n.startsWith("analysis_"), title: "데이터 분석 스킬", summary: "4단계 분석 지침(가설→수집→의심→정리), 함정 체크리스트, 숫자 이상치·급변점 점검, 상관관계" },
+  { match: (n) => n.startsWith("neis_"), title: "학교 · 급식 (NEIS)", summary: "학교 검색, 급식·영양·알레르기 확인, 학사일정, 시간표, 학급·학과 정보, 학원·교습소 검색" },
+  { match: (n) => n.startsWith("weather_"), title: "날씨 · 대기질", summary: "일별 관측·16일 예보, 미세먼지 등급, 도시 비교, 월별 기후 평년, 일출·일몰, 해상 파고" },
+  { match: (n) => n.startsWith("cal_"), title: "달력 · 공휴일", summary: "공휴일 조회, 영업일 수 계산, N영업일 뒤 날짜, 날짜 정보·차이" },
+  { match: (n) => n.startsWith("fx_") || n.startsWith("crypto_"), title: "환율 · 코인 시세", summary: "ECB 기준 환율 조회·추이·환산, 업비트 시세·캔들" },
+  { match: (n) => n.startsWith("wb_"), title: "국가 비교 (World Bank)", summary: "GDP·인구·물가·실업률 등 국가 지표 조회, 국가 간 순위 비교" },
+  { match: (n) => n.startsWith("uci_"), title: "실습 데이터셋 (UCI)", summary: "공개 데이터셋 검색, 메타데이터·변수 설명, 앞부분 미리보기, 강의용 추천 목록" },
+  { match: (n) => n.startsWith("wiki_") || n.startsWith("paper_"), title: "관심도 · 논문 리서치", summary: "위키백과 조회수 추이(관심도 대리지표)·비교, 문서 요약, 논문 검색" },
+  { match: (n) => n.startsWith("bike_"), title: "서울 따릉이", summary: "일별 대여·반납 이용 현황 조회" },
+];
+
+function publicToolCatalog() {
+  const groups = TOOL_GROUPS.map((g) => ({ title: g.title, summary: g.summary, tools: [] }));
+  const etc = { title: "기타", summary: "", tools: [] };
+  for (const t of TOOL_DEFINITIONS) {
+    const i = TOOL_GROUPS.findIndex((g) => g.match(t.name));
+    const desc = String(t.description || "").replace(/^\[[^\]]+\]\s*/, "");
+    (i >= 0 ? groups[i] : etc).tools.push({ name: t.name, description: desc });
+  }
+  if (etc.tools.length) {
+    etc.summary = etc.tools.map((t) => t.name).join(", ");
+    groups.push(etc);
+  }
+  return { total: TOOL_DEFINITIONS.length, groups: groups.filter((g) => g.tools.length) };
+}
+
+function buildGuide() {
+  const cat = publicToolCatalog();
+  const body = cat.groups
+    .map((g) => `## ${g.title} (${g.tools.length}개)\n\n${g.tools.map((t) => `- \`${t.name}\` — ${t.description.split(/(?<=[.다])\s/)[0]}`).join("\n")}`)
+    .join("\n\n");
+  return `${GUIDE_HEAD}\n지금 등록된 도구: ${cat.total}개\n\n${body}\n${GUIDE_TAIL}`;
+}
 
 // /mcp 본체. OAuthProvider가 토큰을 확인한 요청만 여기로 온다(ctx.props에 로그인한 사용자).
 const mcpService = {
@@ -336,6 +404,14 @@ async function callTool(params, env) {
     throw new JsonRpcError(ERROR_CODES.INVALID_PARAMS, "tools/call params.name is required.");
   }
   const args = params.arguments || {};
+  const extra = EXTRA_MODULES.find((m) => m.names.has(params.name));
+  if (extra) {
+    try {
+      return asText(await extra.call(params.name, args, env));
+    } catch (error) {
+      return { content: [{ type: "text", text: `${extra.label} 오류: ${error.message}` }], isError: true };
+    }
+  }
   if (ANALYSIS_TOOL_NAMES.has(params.name)) {
     try {
       return asText(callAnalysisTool(params.name, args));
@@ -359,7 +435,7 @@ async function callTool(params, env) {
   }
   switch (params.name) {
     case "guide":
-      return asText(GUIDE_TEXT);
+      return asText(buildGuide());
     case "neis_list_office_codes":
       return asText(OFFICE_CODES);
     case "neis_search_schools": {
@@ -463,6 +539,10 @@ const publicService = {
         headers.append("set-cookie", `dp_mcp_ref=${v}; Domain=.datapopcorn.ai; Path=/; Max-Age=7776000; Secure; SameSite=Lax`);
       }
       return new Response(LANDING_PAGE, { headers });
+    }
+    if (url.pathname === "/tools" && request.method === "GET") {
+      // 도구 이름·설명만 공개(호출은 여전히 로그인 필요). 소개 페이지가 이걸 읽어서 목록을 그림.
+      return jsonResponse(publicToolCatalog(), { headers: { "cache-control": "public, max-age=300" } });
     }
     if (url.pathname === "/health") {
       return jsonResponse({ status: "ok", server: SERVER_NAME, version: SERVER_VERSION, auth: "oauth2.1", runtime: "cloudflare-workers", timestamp: new Date().toISOString() });

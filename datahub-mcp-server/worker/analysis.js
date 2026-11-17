@@ -88,7 +88,7 @@ export const ANALYSIS_TOOLS = [
   {
     name: "analysis_get_skill",
     description:
-      "[분석] 데이터팝콘 분석 4단계(① 가설 → ② 수집 → ③ 의심 → ④ 정리) 중 한 단계의 작업 지침을 불러옵니다. 분석을 시작하거나 다음 단계로 넘어갈 때 먼저 호출하세요. 예: '이 매출 데이터 분석 어떻게 시작해?' → stage=pipeline, '가설부터 잡아줘' → stage=1-hypothesis, '이 숫자 믿어도 돼?' → stage=3-suspect",
+      "[분석] 데이터팝콘 분석 4단계(① 가설 → ② 수집 → ③ 의심 → ④ 정리) 중 한 단계의 작업 지침을 불러옵니다. 분석을 시작하거나 다음 단계로 넘어갈 때 쓰는 지침입니다. 예: '이 매출 데이터 분석 어떻게 시작해?' → stage=pipeline, '가설부터 잡아줘' → stage=1-hypothesis, '이 숫자 믿어도 돼?' → stage=3-suspect",
     inputSchema: {
       type: "object",
       properties: {

@@ -77,6 +77,19 @@
   .tabpanel { display: none; }
   .tabpanel.active { display: block; }
   #tool-list .status { color: var(--muted); font-size: 0.9rem; }
+  .scope-head { font-size: 1.2rem; margin-bottom: 0.4rem; }
+  .scope-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2.2rem; }
+  @media (max-width: 640px) { .scope-grid { grid-template-columns: 1fr; } }
+  .scope { border-bottom: 1px solid var(--border); padding: 0.95rem 0; }
+  .scope summary { list-style: none; cursor: pointer; }
+  .scope summary::-webkit-details-marker { display: none; }
+  .scope .t { font-size: 1.05rem; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+  .scope .n { font-size: 0.78rem; font-weight: 400; color: var(--muted); white-space: nowrap; }
+  .scope .s { color: var(--muted); font-size: 0.9rem; margin-top: 0.15rem; }
+  .scope summary:hover .t { color: var(--accent); }
+  .scope ul { list-style: none; margin: 0.6rem 0 0; padding: 0; }
+  .scope li { font-size: 0.85rem; color: var(--muted); padding: 0.3rem 0 0.3rem 0.7rem; border-left: 2px solid var(--border); margin-bottom: 0.3rem; }
+  .scope li code { color: var(--fg); font-size: 0.8rem; }
   footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1.2rem; }
   a { color: var(--accent); }
 </style>
@@ -87,8 +100,8 @@
   <header>
     <span class="badge"><span class="dot"></span> 실시간 운영 중 · <code id="endpoint-badge">/mcp</code></span>
     <h1>DataPopcorn Hub</h1>
-    <p class="lead">개인 데이터 소스들을 MCP(Model Context Protocol) 툴로 노출하는 서버.
-    Claude 같은 AI 에이전트가 이 서버에 붙으면 아래 툴을 직접 호출해서 실시간 데이터를 가져올 수 있음.</p>
+    <p class="lead">한국 공공데이터 조회부터 통계 검정, 비즈니스 지표, 한국 실무 계산까지 MCP(Model Context Protocol) 도구로 여는 서버.
+    Claude 같은 AI 에이전트가 붙으면 아래 도구를 직접 호출해서 데이터를 가져오고, 숫자를 지어내지 않고 실제로 계산함.</p>
   </header>
 
   <section>
@@ -100,7 +113,8 @@
   </section>
 
   <section>
-    <h2>지금 붙어 있는 도구</h2>
+    <h2 class="scope-head" id="tool-head">제공 범위</h2>
+    <p class="status" style="color:var(--muted);font-size:0.88rem;margin:0 0 0.4rem">분류를 누르면 실제 도구 이름과 설명이 펼쳐짐. 서버에 등록된 목록을 그대로 읽어 오므로 도구가 추가되면 바로 반영됨.</p>
     <div id="tool-list"><p class="status">불러오는 중…</p></div>
   </section>
 
@@ -184,23 +198,51 @@
 
   async function loadTools() {
     const listEl = document.getElementById("tool-list");
+    const headEl = document.getElementById("tool-head");
     try {
-      const result = await callMcp("tools/list");
-      const tools = result.result?.tools || [];
-      if (!tools.length) {
+      let data;
+      try {
+        const res = await fetch(window.location.origin + "/tools", { headers: { Accept: "application/json" } });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        data = await res.json();
+      } catch (e) {
+        // /tools가 없는 로컬 서버(http.js)용: MCP tools/list를 직접 읽어 접두어로 묶음
+        const tools = (await callMcp("tools/list")).result?.tools || [];
+        const by = {};
+        tools.forEach((t) => {
+          const k = t.name.includes("_") ? t.name.split("_")[0] : t.name;
+          (by[k] = by[k] || { title: k, summary: "", tools: [] }).tools.push(t);
+        });
+        Object.values(by).forEach((g) => (g.summary = g.tools.map((t) => t.name).join(", ")));
+        data = { total: tools.length, groups: Object.values(by) };
+      }
+      const groups = data.groups || [];
+      if (!groups.length) {
         listEl.innerHTML = '<p class="status">등록된 툴이 없음.</p>';
         return;
       }
-      listEl.innerHTML = tools
-        .map(
-          (t) =>
-            '<div class="card"><h3>' +
-            escapeHtml(t.name) +
-            "</h3><p>" +
-            escapeHtml(t.description || "") +
-            "</p></div>"
-        )
-        .join("");
+      headEl.textContent = "제공 범위 · " + data.total + "개 도구";
+      listEl.innerHTML =
+        '<div class="scope-grid">' +
+        groups
+          .map(
+            (g) =>
+              '<details class="scope"><summary><div class="t">' +
+              escapeHtml(g.title) +
+              '<span class="n">' + g.tools.length + "개</span></div>" +
+              '<div class="s">' + escapeHtml(g.summary || "") + "</div></summary><ul>" +
+              g.tools
+                .map(
+                  (t) =>
+                    "<li><code>" + escapeHtml(t.name) + "</code><br>" +
+                    escapeHtml((t.description || "").split(/(?<=[.다])\s/)[0]) +
+                    "</li>"
+                )
+                .join("") +
+              "</ul></details>"
+          )
+          .join("") +
+        "</div>";
     } catch (err) {
       listEl.innerHTML =
         '<p class="status">서버 응답을 못 받아옴 — 새로고침해보거나 잠시 후 다시 시도. (' +
