@@ -17,8 +17,8 @@ const ALLERGEN_ALIASES = {
   홍합: 18, 잣: 19,
 };
 
-const office = { type: "string", description: "시도교육청 코드, 예: B10(서울). neis_list_office_codes로 조회" };
-const school = { type: "string", description: "표준학교코드 SD_SCHUL_CODE (neis_search_schools로 조회)" };
+const office = { type: "string", description: "시도교육청 코드, 예: B10(서울), C10(부산), J10(경기)" };
+const school = { type: "string", description: "표준학교코드 SD_SCHUL_CODE (학교 검색 결과의 값)" };
 const fromDate = { type: "string", description: "시작일 YYYY-MM-DD 또는 YYYYMMDD" };
 const toDate = { type: "string", description: "종료일 YYYY-MM-DD 또는 YYYYMMDD" };
 

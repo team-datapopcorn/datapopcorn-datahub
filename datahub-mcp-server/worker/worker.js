@@ -19,7 +19,7 @@ import { RESEARCH_TOOLS, RESEARCH_TOOL_NAMES, callResearchTool } from "./researc
 import { SUNEUNG_TOOLS, SUNEUNG_TOOL_NAMES, callSuneungTool } from "./suneung.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.6.0";
+const SERVER_VERSION = "0.6.1";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "데이터팝콘 데이터 MCP. 한국 공공데이터 조회(NEIS·날씨·환율 등), 통계 검정·예측(stats_), 비즈니스 지표(biz_), " +
@@ -99,7 +99,7 @@ const TOOL_DEFINITIONS_BASE = [
     inputSchema: {
       type: "object",
       properties: {
-        officeCode: { type: "string", description: "시도교육청 코드, 예: B10 (서울). neis_list_office_codes로 조회 가능" },
+        officeCode: { type: "string", description: "시도교육청 코드, 예: B10(서울), C10(부산), J10(경기)" },
         schoolName: { type: "string", description: "학교명 부분 일치 검색어" },
         pIndex: { type: "integer", minimum: 1, default: 1 },
         pSize: { type: "integer", minimum: 1, maximum: 100, default: 20 },
