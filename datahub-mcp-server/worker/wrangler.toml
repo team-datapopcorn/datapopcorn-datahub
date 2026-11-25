@@ -18,6 +18,11 @@ routes = [
 binding = "OAUTH_KV"
 id = "568d9802093e44b498cd7e06c30c8816"
 
+# 국방부 병영식단 사본(국내 맥 scripts/mnd-sync.mjs가 /admin/mnd-sync로 업로드)
+[[kv_namespaces]]
+binding = "MND_KV"
+id = "b156788a5690452abbeb20321edb9c4d"
+
 [[d1_databases]]
 binding = "USAGE_DB"
 database_name = "datapopcorn-mcp-usage"

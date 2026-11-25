@@ -17,9 +17,10 @@ import { ECON_TOOLS, ECON_TOOL_NAMES, callEconTool } from "./econ.js";
 import { UCI_TOOLS, UCI_TOOL_NAMES, callUciTool } from "./uci.js";
 import { RESEARCH_TOOLS, RESEARCH_TOOL_NAMES, callResearchTool } from "./research.js";
 import { SUNEUNG_TOOLS, SUNEUNG_TOOL_NAMES, callSuneungTool } from "./suneung.js";
+import { MND_TOOLS, MND_TOOL_NAMES, callMndTool, handleMndSync } from "./mnd.js";
 
 const SERVER_NAME = "datahub-mcp-server";
-const SERVER_VERSION = "0.6.1";
+const SERVER_VERSION = "0.7.1";
 const NEIS_BASE_URL = "https://open.neis.go.kr/hub";
 const SERVER_INSTRUCTIONS =
   "데이터팝콘 데이터 MCP. 한국 공공데이터 조회(NEIS·날씨·환율 등), 통계 검정·예측(stats_), 비즈니스 지표(biz_), " +
@@ -34,7 +35,7 @@ const GUIDE_HEAD = `# 데이터팝콘 데이터 MCP 사용 가이드
 ## 추천 흐름
 
 1. 질문이 막연하면 \`analysis_get_skill\`(stage=pipeline)로 데이터팝콘 분석 4단계(가설 → 수집 → 의심 → 정리)부터.
-2. 데이터는 조회 도구(neis_, weather_, fx_, wb_, uci_, wiki_, suneung_)로 가져오거나, 사용자가 붙여 넣은 CSV를 \`data_\` 도구로 정리.
+2. 데이터는 조회 도구(neis_, mil_, weather_, fx_, wb_, uci_, wiki_, suneung_)로 가져오거나, 사용자가 붙여 넣은 CSV를 \`data_\` 도구로 정리.
 3. 숫자는 \`stats_\`(검정·예측)·\`biz_\`(퍼널·코호트·RFM·LTV 등)로 계산하고, 결론 전에 \`analysis_traps_checklist\`로 함정 점검.
 `;
 const GUIDE_TAIL = `
@@ -147,10 +148,11 @@ const EXTRA_MODULES = [
   { names: UCI_TOOL_NAMES, call: callUciTool, label: "UCI 데이터셋 조회" },
   { names: RESEARCH_TOOL_NAMES, call: callResearchTool, label: "리서치 조회" },
   { names: SUNEUNG_TOOL_NAMES, call: callSuneungTool, label: "수능 조회" },
+  { names: MND_TOOL_NAMES, call: callMndTool, label: "군부대 식단 조회" },
 ];
 
 const TOOL_DEFINITIONS = [
-  ...TOOL_DEFINITIONS_BASE, ...NEIS2_TOOLS, ...KMA_TOOLS, ...BIKE_TOOLS, ...CAL_TOOLS,
+  ...TOOL_DEFINITIONS_BASE, ...NEIS2_TOOLS, ...MND_TOOLS, ...KMA_TOOLS, ...BIKE_TOOLS, ...CAL_TOOLS,
   ...ANALYSIS_TOOLS, ...STATS_TOOLS, ...DATA_TOOLS, ...BIZ_TOOLS, ...KR_TOOLS,
   ...ECON_TOOLS, ...UCI_TOOLS, ...RESEARCH_TOOLS, ...SUNEUNG_TOOLS,
 ];
@@ -173,6 +175,7 @@ const TOOL_GROUPS = [
   { match: (n) => n.startsWith("kr_"), title: "한국 실무 계산", summary: "사업자번호 검증, 부가세·3.3% 원천징수, 금액 한글 표기, 대출 상환표·예적금 이자, 평 환산, 만 나이" },
   { match: (n) => n.startsWith("analysis_"), title: "데이터 분석 스킬", summary: "4단계 분석 지침(가설→수집→의심→정리), 함정 체크리스트, 숫자 이상치·급변점 점검, 상관관계" },
   { match: (n) => n.startsWith("neis_"), title: "학교 · 급식 (NEIS)", summary: "학교 검색, 급식·영양·알레르기 확인, 학사일정, 시간표, 학급·학과 정보, 학원·교습소 검색" },
+  { match: (n) => n.startsWith("mil_"), title: "군부대 식단 (국방부)", summary: "육군훈련소 등 34개 부대 병영식단 조회, 부대 간 비교, 메뉴별 열량·알레르기 확인" },
   { match: (n) => n.startsWith("weather_"), title: "날씨 · 대기질", summary: "기상청 관측·단기예보, 에어코리아 미세먼지, 지명→예보격자, 도시 비교, 월별 기후, 일출·일몰, 해상 파고" },
   { match: (n) => n.startsWith("cal_"), title: "달력 · 공휴일", summary: "공휴일 조회, 영업일 수 계산, N영업일 뒤 날짜, 날짜 정보·차이" },
   { match: (n) => n.startsWith("fx_"), title: "환율", summary: "ECB 기준 환율 조회·추이·환산" },
@@ -531,6 +534,9 @@ const publicService = {
         headers.append("set-cookie", `dp_mcp_ref=${v}; Domain=.datapopcorn.ai; Path=/; Max-Age=7776000; Secure; SameSite=Lax`);
       }
       return new Response(LANDING_PAGE, { headers });
+    }
+    if (url.pathname === "/admin/mnd-sync" && request.method === "POST") {
+      return handleMndSync(request, env);
     }
     if (url.pathname === "/tools" && request.method === "GET") {
       // 도구 이름·설명만 공개(호출은 여전히 로그인 필요). 소개 페이지가 이걸 읽어서 목록을 그림.

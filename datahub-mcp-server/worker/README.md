@@ -4,7 +4,7 @@
 도메인이 Dev@datapopcorn.ai 계정으로 옮겨진 뒤 Error 1000으로 멈췄고, 터널 호스트에도 접속할 수 없어서 Worker로 옮겼다.
 
 - 계정: Dev@datapopcorn.ai's Account, Worker 이름 `datapopcorn-datahub-mcp`, 커스텀 도메인 `api.datapopcorn.ai`
-- 도구: v0.6.0 기준 107개(14개 분류). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
+- 도구: v0.7.1 기준 111개(15개 분류, 군부대 식단 4개 추가). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
 - 비밀값: `NEIS_API_KEY`, `DATAGOKR_KEY`(공공데이터포털 일반 인증키, 기상청·에어코리아), `SEOUL_OPEN_DATA_KEY`(서울 열린데이터, 따릉이) (`npx wrangler secret put <이름>`). NEIS의 `sample` 키는 2026-11-03 기준 ERROR-290으로 거절됨
 - 배포: 이 폴더에서 `npx wrangler deploy`. `landing.html`은 `../public/index.html` 복사본이다
 
@@ -68,3 +68,15 @@
 - 알려진 한계: OpenAlex 무키 한도는 Cloudflare 공용 IP에서 금방 차서 Crossref 대체가 자주 쓰일 수 있음(`OPENALEX_API_KEY` 비밀값을 넣으면 OpenAlex 우선). 업비트 시세 도구 2개(crypto_)는 v0.5.3에서 뺐다: 업비트 Open API 약관 제5조가 영리목적 이용·재배포를 금지
 - 날씨는 v0.6.0에서 Open-Meteo(무료 API는 비상업 전용)를 걷어내고 기상청·에어코리아(공공누리, 상업 이용 가능)로 교체. 지명 표는 시군구 약 300곳 좌표 + KMA LCC 격자 변환(일부 1칸 차이 가능), ASOS 91개 지점은 API로 이름 대조 완료
 - 공공데이터포털 개발계정 키는 API별 일 10,000회 한도이고 재난 한 장 잡과 같이 쓴다. 사용량이 늘면 운영계정 전환 신청 필요
+
+
+## 군부대 식단 (mil_, v0.7.1, 2026-11-25 배포)
+
+- **운영 구조(중요)**: Cloudflare Worker에서는 국방부 서버(포털·OpenAPI 모두)가 연결 시간 초과(HTTP 522)로 막힌다(2026-11-25 운영 확인, 해외 IP 차단 추정). 그래서 데이터팝콘 맥 launchd `ai.datapopcorn.mnd-sync`(매일 06:20·18:20, LLM 없음)가 `~/datapopcorn-jobs/mnd-sync/mnd-sync.mjs`(= `scripts/mnd-sync.mjs` + `worker/mnd.js` 사본)로 포털에서 34개 부대 전체 식단을 받아, 바뀐 연도만 `POST /admin/mnd-sync`(Bearer `MND_SYNC_TOKEN`)로 올린다. Worker는 KV `MND_KV`(datapopcorn-mnd-meals) 사본(`u:{코드}` 메타, `y:{코드}:{연도}` 행)을 먼저 읽고, 사본이 없을 때만 실시간 경로를 8초 제한으로 시도한다. 첫 동기화 34/34, 207,003행. 토큰 원본은 Aside Vault "데이터 MCP 군부대 식단 동기화 토큰", 맥에는 `~/.config/datapopcorn/mnd-sync.env`(600). 로그 `~/datapopcorn-jobs/mnd-sync/sync.log`. `mnd.js`를 바꾸면 맥의 사본도 같이 바꾼다.
+- 포털 원본에 엑셀 수식(`IF(A8="",H7,A8)`)의 이스케이프 안 된 따옴표가 섞여 JSON이 깨지는 부대가 있다(2171·5397·7296). `parsePortalRows`가 줄 단위·필드 단위로 복구하고 수식 값은 빈칸 처리.
+
+- 출처: 국방부 공공데이터 개방(data.mnd.go.kr) 부대별 병영 표준식단 OpenAPI `https://openapi.mnd.go.kr/{KEY}/json/DS_TB_MNDT_DATEBYMLSVC_{부대코드}/{시작}/{끝}/`. 2026-11-21 OA-9400~9899 전수 확인으로 34개 부대(육군훈련소 ATC 포함). 목록은 `mnd.js`의 `MND_UNITS`.
+- 이용조건: 공공누리 제3유형(출처표시+변경금지). 메뉴 이름은 원문 그대로 반환하고 알레르기 번호만 분리해 해석, 응답마다 `attribution` 포함.
+- 인증키: Worker 시크릿 `MND_OPENAPI_KEY`(값은 기록하지 않음, 원본은 Aside Vault "국방부 OpenAPI 인증키"). 2026-11-25 이인영 I-PIN 로그인으로 발급·등록. 포털 로그인은 I-PIN 본인인증만 가능.
+- 호출 방식(v0.7.0): 기본은 국방부 개방포털 시트 화면의 공개 JSON 다운로드 `opendata.mnd.go.kr/openinf/opencom/down2json.jsp`(POST, 로그인 불필요)를 `filterCol=dates&txtFilter=YYYY-MM`(국방부 표준식단 MND만 YYYYMM) 월 필터로 1회 호출하고 Worker 캐시에 3시간 보관. 응답 0바이트 = 그 달 식단 없음. 포털이 실패하면 인증키로 OpenAPI를 1000행씩 전체(최대 12번) 읽음. OpenAPI 행은 날짜순 정렬이 아니어서(육군훈련소 확인) 앞뒤만 보고 멈추면 최근 식단을 놓친다. 부대별로 날짜 표기(`2026-11-30(월)`, `2026-11-30`, `2026-11-9(월)`, `20180712`)와 헤더 순서(MND, 7021, 7017)가 달라 `HEADER_OVERRIDE`로 처리. openapi.mnd.go.kr는 user-agent 없는 요청을 400으로 거절.
+- 도구: `mil_list_units`, `mil_get_meals`, `mil_compare_meals`, `mil_meal_allergen_check`. 테스트 `tests/mnd.test.mjs`(실제 sample 응답 형식 + 가짜 서버로 로직 검증).
