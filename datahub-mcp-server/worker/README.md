@@ -4,7 +4,7 @@
 도메인이 Dev@datapopcorn.ai 계정으로 옮겨진 뒤 Error 1000으로 멈췄고, 터널 호스트에도 접속할 수 없어서 Worker로 옮겼다.
 
 - 계정: Dev@datapopcorn.ai's Account, Worker 이름 `datapopcorn-datahub-mcp`, 커스텀 도메인 `api.datapopcorn.ai`
-- 도구: v0.7.1 기준 111개(15개 분류, 군부대 식단 4개 추가). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
+- 도구: v0.8.0 기준 115개(17개 분류, 군부대 식단 4개·국가데이터처 KOSIS 4개 추가). 목록은 `GET https://api.datapopcorn.ai/tools`(공개, 이름·설명만) 또는 아래 '도구 100개 확장' 표
 - 비밀값: `NEIS_API_KEY`, `DATAGOKR_KEY`(공공데이터포털 일반 인증키, 기상청·에어코리아), `SEOUL_OPEN_DATA_KEY`(서울 열린데이터, 따릉이) (`npx wrangler secret put <이름>`). NEIS의 `sample` 키는 2026-11-03 기준 ERROR-290으로 거절됨
 - 배포: 이 폴더에서 `npx wrangler deploy`. `landing.html`은 `../public/index.html` 복사본이다
 
@@ -69,6 +69,13 @@
 - 날씨는 v0.6.0에서 Open-Meteo(무료 API는 비상업 전용)를 걷어내고 기상청·에어코리아(공공누리, 상업 이용 가능)로 교체. 지명 표는 시군구 약 300곳 좌표 + KMA LCC 격자 변환(일부 1칸 차이 가능), ASOS 91개 지점은 API로 이름 대조 완료
 - 공공데이터포털 개발계정 키는 API별 일 10,000회 한도이고 재난 한 장 잡과 같이 쓴다. 사용량이 늘면 운영계정 전환 신청 필요
 
+
+## 국가통계 (kosis_, v0.8.0, 2026-11-25 배포)
+
+- 출처: 국가데이터처(구 통계청) KOSIS 공유서비스 OpenAPI `https://kosis.kr/openapi/...`. 인증키는 Worker 시크릿 `KOSIS_API_KEY`(KOSIS 계정 finsend, 2026-07-14 발급, 2028-07-14 만료, 원본은 Aside Vault "KOSIS 공유서비스 OpenAPI 인증키"). 신청정보의 상업적활용유무는 "비활용"으로 돼 있으니 유료화 전에 KOSIS 마이페이지에서 고칠 것.
+- 이용조건(통계정보 이용지침, 2026-11-25 확인): 무료, 사용·재사용·재배포·상업적 활용 가능, 출처 명시 필수. 국제·북한통계는 비상업적 목적만이고 재배포 금지라 검색 결과에서 제외(`VW_CD`가 `MT_RTITLE*`·`MT_BUKHAN`). 가공 없이 유료 판매 금지. 분당 200회, 요청당 40,000셀.
+- Cloudflare에서 KOSIS 직접 접속 가능(국방부와 달리 차단 없음, 2026-11-25 실측).
+- 도구: `kosis_search_tables`(통합검색 statisticsSearch.do), `kosis_table_info`(getMeta TBL·PRD·ITM·UNIT), `kosis_get_data`(Param/statisticsParameterData.do, 코드는 공백 구분 → `+` 연결, 기본 최근 5개 시점, 응답 400행까지), `kosis_survey_info`(statisticsExplData.do). 결과마다 출처(통계표명, KOSIS, URL, 참조일) 포함. 테스트 `tests/kosis.test.mjs`(가짜 서버 + `KOSIS_API_KEY` 있으면 실서버).
 
 ## 군부대 식단 (mil_, v0.7.1, 2026-11-25 배포)
 

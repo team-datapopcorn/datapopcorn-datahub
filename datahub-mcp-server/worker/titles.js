@@ -24,6 +24,7 @@ export const TOOL_TITLES = {
   neis_list_office_codes: "시도교육청 코드", neis_search_schools: "학교 검색", neis_get_meals: "급식 메뉴 조회", neis_get_school_schedule: "학사일정 조회",
   neis_get_timetable: "시간표 조회", neis_get_class_info: "학급 정보", neis_get_school_majors: "학과·계열 정보", neis_search_academies: "학원·교습소 검색",
   neis_get_meal_nutrition: "급식 영양 정보", neis_meal_allergen_check: "급식 알레르기 확인",
+  kosis_search_tables: "국가통계 통계표 검색", kosis_table_info: "국가통계 통계표 구조", kosis_get_data: "국가통계 수치 조회", kosis_survey_info: "국가통계 조사 설명",
   mil_list_units: "군부대 식단 공개 부대 목록", mil_get_meals: "군부대 식단 조회", mil_compare_meals: "군부대 식단 비교", mil_meal_allergen_check: "군부대 식단 알레르기 확인",
   weather_get_daily: "일별 날씨 관측", weather_get_forecast: "단기 날씨 예보", weather_get_air_quality: "미세먼지 측정·예보", weather_find_location: "지명→좌표·예보격자",
   weather_compare_cities: "도시별 날씨 비교", weather_monthly_climate: "월별 기후 평년", weather_get_sun_times: "일출·일몰 시각", weather_marine: "해상 파고",
